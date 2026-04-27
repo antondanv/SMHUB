@@ -71,7 +71,20 @@ pip install -r backend/requirements.txt
 cp backend/.env.example backend/.env
 ```
 
-4. Запустите сервер разработки из корня репозитория:
+4. Примените миграции:
+
+```bash
+./.venv/bin/alembic -c backend/alembic.ini upgrade head
+```
+
+5. При необходимости заполните справочники стартовыми данными:
+
+```bash
+cd backend
+../.venv/bin/python -m app.db.seed
+```
+
+6. Запустите сервер разработки из корня репозитория:
 
 ```bash
 uvicorn app.main:app --reload --app-dir backend
