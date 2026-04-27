@@ -17,3 +17,4 @@ class Program(Base):
     subject_programs: Mapped[List["SubjectProgram"]] = relationship(
         back_populates="program"
     )
+    materials: Mapped[List["Material"]] = relationship(back_populates="program")

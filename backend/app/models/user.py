@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -35,3 +36,8 @@ class User(Base):
     )
     course: Mapped["Course"] = relationship(back_populates="users")
     program: Mapped["Program"] = relationship(back_populates="users")
+    materials: Mapped[List["Material"]] = relationship(back_populates="author")
+    comments: Mapped[List["Comment"]] = relationship(back_populates="user")
+    likes: Mapped[List["Like"]] = relationship(back_populates="user")
+    favorites: Mapped[List["Favorite"]] = relationship(back_populates="user")
+    ratings: Mapped[List["Rating"]] = relationship(back_populates="user")
