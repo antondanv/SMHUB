@@ -24,6 +24,7 @@ SMHUB/
 │   ├── package.json
 │   └── vite.config.js
 ├── docs/
+│   ├── API_CONTRACT.md
 │   ├── IDEA.md
 │   ├── MODELS.md
 │   ├── PLAN.md
@@ -111,6 +112,7 @@ npm run dev
 ## Документация
 
 - [Общий план](docs/PLAN.md)
+- [API-контракт](docs/API_CONTRACT.md)
 - [Текущий и следующий таск](docs/TASKS.md)
 - [Идея проекта](docs/IDEA.md)
 - [Заметки по моделям](docs/MODELS.md)
