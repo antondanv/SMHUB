@@ -2,8 +2,6 @@
 
 SMHUB - проект для обмена учебными материалами между студентами.
 
-Сейчас в репозитории уже есть базовый backend на FastAPI и рабочая документация. Папка `frontend/` создана, но клиентская часть ещё не инициализирована.
-
 ## Текущая структура
 
 ```text
@@ -20,6 +18,11 @@ SMHUB/
 │   ├── .env.example
 │   └── requirements.txt
 ├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
 ├── docs/
 │   ├── IDEA.md
 │   ├── MODELS.md
@@ -32,13 +35,15 @@ SMHUB/
 
 - проект собран в один репозиторий;
 - создана базовая структура backend на FastAPI;
+- инициализирован frontend на React + Vite;
 - настроен CORS для `http://localhost:5173`;
-- реализован endpoint проверки состояния `GET /health`;
+- реализован endpoint проверки состояния `GET /health` на backend;
+- реализована проверка backend на главной странице frontend;
 - актуальные рабочие документы лежат в `docs/`.
 
 ## Запуск backend
 
-Backend находится в папке `backend/` и сейчас является основной готовой частью проекта.
+Backend находится в папке `backend/`.
 
 1. Создайте и активируйте виртуальное окружение:
 
@@ -77,17 +82,31 @@ uvicorn app.main:app --reload --app-dir backend
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - проверка состояния: `http://127.0.0.1:8000/health`
 
-Ожидаемый ответ от `GET /health`:
+## Запуск frontend
 
-```json
-{
-  "status": "ok"
-}
+Frontend находится в папке `frontend/`.
+
+1. Перейдите в папку frontend:
+
+```bash
+cd frontend
 ```
 
-## Статус frontend
+2. Установите зависимости:
 
-Папка `frontend/` уже создана, но приложение на React + Vite ещё не добавлено. Это следующий крупный шаг для завершения этапа 0.
+```bash
+npm install
+```
+
+3. Запустите сервер разработки:
+
+```bash
+npm run dev
+```
+
+После запуска frontend будет доступен по адресу:
+
+- `http://localhost:5173`
 
 ## Документация
 
@@ -95,9 +114,3 @@ uvicorn app.main:app --reload --app-dir backend
 - [Текущий и следующий таск](docs/TASKS.md)
 - [Идея проекта](docs/IDEA.md)
 - [Заметки по моделям](docs/MODELS.md)
-
-## Ограничения на текущем этапе
-
-- frontend ещё не готов;
-- PostgreSQL, SQLAlchemy и Alembic запланированы на следующий этап;
-- полный запуск backend в этом окружении не был проверен, потому что локально не установлены Python-зависимости.
