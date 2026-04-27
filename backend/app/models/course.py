@@ -16,3 +16,4 @@ class Course(Base):
     subject_programs: Mapped[List["SubjectProgram"]] = relationship(
         back_populates="course"
     )
+    materials: Mapped[List["Material"]] = relationship(back_populates="course")

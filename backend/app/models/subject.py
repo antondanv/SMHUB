@@ -15,3 +15,4 @@ class Subject(Base):
     subject_programs: Mapped[List["SubjectProgram"]] = relationship(
         back_populates="subject"
     )
+    materials: Mapped[List["Material"]] = relationship(back_populates="subject")
