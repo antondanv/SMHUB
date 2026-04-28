@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -20,10 +20,11 @@ class Comment(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
         server_default=func.now(),
         onupdate=func.now(),
     )
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     material: Mapped["Material"] = relationship(back_populates="comments")
     user: Mapped["User"] = relationship(back_populates="comments")
