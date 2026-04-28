@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.enums import MaterialStatus
 
 
 class Material(Base):
@@ -17,23 +16,27 @@ class Material(Base):
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     subject_id: Mapped[int] = mapped_column(ForeignKey("subjects.id"), nullable=False)
     material_type_id: Mapped[int] = mapped_column(
-        ForeignKey("material_types.id"), nullable=True
-    )
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), nullable=True)
-    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), nullable=True)
-    file_url: Mapped[str] = mapped_column(String(500), nullable=False)
-    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_size: Mapped[int] = mapped_column(Integer, nullable=True)
-    mime_type: Mapped[str] = mapped_column(String(100), nullable=True)
-    status: Mapped[MaterialStatus] = mapped_column(
-        Enum(
-            MaterialStatus,
-            name="material_status",
-            values_callable=lambda enum_class: [item.value for item in enum_class],
-        ),
+        ForeignKey("material_types.id"),
         nullable=False,
-        default=MaterialStatus.PENDING,
     )
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("courses.id"),
+        nullable=False,
+    )
+    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), nullable=False)
+    mime_type_id: Mapped[int] = mapped_column(
+        SmallInteger,
+        ForeignKey("mime_types.id"),
+        nullable=False,
+    )
+    status_id: Mapped[int] = mapped_column(
+        SmallInteger,
+        ForeignKey("material_statuses.id"),
+        nullable=False,
+    )
+    file_url: Mapped[str] = mapped_column(Text, nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     views_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     downloads_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     likes_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -47,7 +50,7 @@ class Material(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
         server_default=func.now(),
         onupdate=func.now(),
     )
@@ -57,7 +60,8 @@ class Material(Base):
     material_type: Mapped["MaterialType"] = relationship(back_populates="materials")
     course: Mapped["Course"] = relationship(back_populates="materials")
     program: Mapped["Program"] = relationship(back_populates="materials")
+    mime_type: Mapped["MimeType"] = relationship(back_populates="materials")
+    status: Mapped["MaterialStatus"] = relationship(back_populates="materials")
     comments: Mapped[List["Comment"]] = relationship(back_populates="material")
     likes: Mapped[List["Like"]] = relationship(back_populates="material")
     favorites: Mapped[List["Favorite"]] = relationship(back_populates="material")
-    ratings: Mapped[List["Rating"]] = relationship(back_populates="material")

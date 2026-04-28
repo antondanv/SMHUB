@@ -1,7 +1,16 @@
 from sqlalchemy import select
 
 from app.db.database import SessionLocal
-from app.models import Course, MaterialType, Program, Subject, SubjectProgram
+from app.models import (
+    Course,
+    MaterialStatus,
+    MaterialType,
+    MimeType,
+    Program,
+    Role,
+    Subject,
+    SubjectProgram,
+)
 
 
 COURSES = [
@@ -72,6 +81,57 @@ MATERIAL_TYPES = [
     "Методичка",
 ]
 
+ROLES = [
+    {
+        "name": "student",
+        "description": "Базовая роль обучающегося с доступом к материалам.",
+    },
+    {
+        "name": "moderator",
+        "description": "Модератор, который проверяет и публикует материалы.",
+    },
+    {
+        "name": "admin",
+        "description": "Администратор системы с полным доступом.",
+    },
+]
+
+MATERIAL_STATUSES = [
+    {"name": "draft", "description": "Черновик материала."},
+    {"name": "pending", "description": "Материал ожидает модерации."},
+    {"name": "published", "description": "Материал опубликован."},
+    {"name": "rejected", "description": "Материал отклонён."},
+    {"name": "archived", "description": "Материал архивирован."},
+]
+
+MIME_TYPES = [
+    {
+        "name": "application/pdf",
+        "extension": ".pdf",
+        "description": "PDF-документ.",
+    },
+    {
+        "name": "application/msword",
+        "extension": ".doc",
+        "description": "Документ Microsoft Word.",
+    },
+    {
+        "name": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "extension": ".docx",
+        "description": "Документ Microsoft Word Open XML.",
+    },
+    {
+        "name": "application/vnd.ms-powerpoint",
+        "extension": ".ppt",
+        "description": "Презентация Microsoft PowerPoint.",
+    },
+    {
+        "name": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "extension": ".pptx",
+        "description": "Презентация Microsoft PowerPoint Open XML.",
+    },
+]
+
 SUBJECT_PROGRAM_LINKS = [
     {"subject_name": "Программирование", "program_code": "09.03.03", "course_number": 1},
     {"subject_name": "Базы данных", "program_code": "09.03.03", "course_number": 2},
@@ -99,6 +159,18 @@ def seed_reference_data() -> None:
             material_type.name: material_type
             for material_type in session.scalars(select(MaterialType)).all()
         }
+        existing_roles = {
+            role.name: role
+            for role in session.scalars(select(Role)).all()
+        }
+        existing_material_statuses = {
+            status.name: status
+            for status in session.scalars(select(MaterialStatus)).all()
+        }
+        existing_mime_types = {
+            mime_type.name: mime_type
+            for mime_type in session.scalars(select(MimeType)).all()
+        }
 
         for course_data in COURSES:
             if course_data["number"] not in existing_courses:
@@ -123,6 +195,24 @@ def seed_reference_data() -> None:
                 material_type = MaterialType(name=material_type_name)
                 session.add(material_type)
                 existing_material_types[material_type.name] = material_type
+
+        for role_data in ROLES:
+            if role_data["name"] not in existing_roles:
+                role = Role(**role_data)
+                session.add(role)
+                existing_roles[role.name] = role
+
+        for status_data in MATERIAL_STATUSES:
+            if status_data["name"] not in existing_material_statuses:
+                status = MaterialStatus(**status_data)
+                session.add(status)
+                existing_material_statuses[status.name] = status
+
+        for mime_type_data in MIME_TYPES:
+            if mime_type_data["name"] not in existing_mime_types:
+                mime_type = MimeType(**mime_type_data)
+                session.add(mime_type)
+                existing_mime_types[mime_type.name] = mime_type
 
         session.flush()
 
