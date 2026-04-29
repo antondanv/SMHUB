@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import users, courses, programs
+
 app = FastAPI(
     title="SMHUB API",
     description="API для системы обмена учебными материалами",
@@ -14,6 +16,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(users.router)
+app.include_router(courses.router)
+app.include_router(programs.router)
 
 
 @app.get("/health")
