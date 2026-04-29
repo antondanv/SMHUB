@@ -1,7 +1,7 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import HomePage from './pages/HomePage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -11,6 +11,7 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="materials" element={<div>Страница материалов (в разработке)</div>} />
           <Route path="login" element={<div>Страница входа (в разработке)</div>} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Routes>
     </Router>
