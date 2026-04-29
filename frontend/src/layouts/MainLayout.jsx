@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 
 const MainLayout = () => {
@@ -11,6 +10,7 @@ const MainLayout = () => {
             <ul className="flex space-x-4">
               <li><Link to="/" className="hover:underline">Главная</Link></li>
               <li><Link to="/materials" className="hover:underline">Материалы</Link></li>
+              <li><Link to="/profile" className="hover:underline">Профиль</Link></li>
               <li><Link to="/login" className="hover:underline">Вход</Link></li>
             </ul>
           </nav>
