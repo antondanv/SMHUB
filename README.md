@@ -46,10 +46,12 @@ SMHUB/
 
 Backend находится в папке `backend/`.
 
+Требуется Python `3.12+`.
+
 1. Создайте и активируйте виртуальное окружение:
 
 ```bash
-python -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
