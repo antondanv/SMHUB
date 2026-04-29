@@ -1,28 +1,40 @@
-import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 
 const MainLayout = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-blue-600 text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold">SMHUB</Link>
-          <nav>
-            <ul className="flex space-x-4">
-              <li><Link to="/" className="hover:underline">Главная</Link></li>
-              <li><Link to="/materials" className="hover:underline">Материалы</Link></li>
-              <li><Link to="/login" className="hover:underline">Вход</Link></li>
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="site-header__inner">
+          <Link to="/" className="brand">
+            SMHUB
+          </Link>
+
+          <nav className="site-nav" aria-label="Основная навигация">
+            <ul>
+              <li>
+                <Link to="/">Главная</Link>
+              </li>
+              <li>
+                <Link to="/materials">Материалы</Link>
+              </li>
+              <li>
+                <Link to="/register">Регистрация</Link>
+              </li>
+              <li>
+                <Link to="/login">Вход</Link>
+              </li>
             </ul>
           </nav>
         </div>
       </header>
-      
-      <main className="flex-grow container mx-auto p-4">
+
+      <main className="site-main">
         <Outlet />
       </main>
-      
-      <footer className="bg-gray-200 p-4 text-center">
-        <p>&copy; 2026 SMHUB - Система обмена учебными материалами</p>
+
+      <footer className="site-footer">
+        <p>SMHUB, 2026</p>
+        <p>Система обмена учебными материалами</p>
       </footer>
     </div>
   );

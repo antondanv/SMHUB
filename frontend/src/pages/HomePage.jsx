@@ -1,36 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import apiClient from '../api/apiClient';
+import { Link } from 'react-router-dom';
 
 const HomePage = () => {
-  const [healthStatus, setHealthStatus] = useState('checking...');
-
-  useEffect(() => {
-    apiClient.get('/health')
-      .then(response => {
-        setHealthStatus(response.data.status === 'ok' ? 'Online' : 'Error');
-      })
-      .catch(error => {
-        console.error('Health check failed:', error);
-        setHealthStatus('Offline');
-      });
-  }, []);
-
   return (
-    <div className="text-center">
-      <h1 className="text-4xl font-bold mb-4">Добро пожаловать в SMHUB</h1>
-      <p className="text-xl mb-8">Платформа для обмена учебными материалами</p>
-      
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 inline-block">
-        <h2 className="text-2xl font-semibold mb-2">Статус Backend:</h2>
-        <p className={`text-xl font-bold ${healthStatus === 'Online' ? 'text-green-500' : 'text-red-500'}`}>
-          {healthStatus}
+    <section className="home-page">
+      <div className="home-page__content">
+        <p className="eyebrow">Учебные материалы в одном месте</p>
+        <h1>SMHUB</h1>
+        <p className="lead">
+          Каркас платформы для обмена конспектами, лекциями, лабораторными и
+          полезными материалами между студентами.
         </p>
+
+        <div className="home-actions">
+          <Link className="button button--primary" to="/materials">
+            Смотреть материалы
+          </Link>
+          <Link className="button button--secondary" to="/register">
+            Создать аккаунт
+          </Link>
+        </div>
       </div>
-      
-      <div className="mt-8">
-        <p className="text-gray-600 italic">Здесь скоро появится лента актуальных материалов.</p>
+
+      <div className="home-panel" aria-label="Заглушка будущего каталога">
+        <div>
+          <span>Каталог</span>
+          <strong>Скоро</strong>
+        </div>
+        <div>
+          <span>Профиль</span>
+          <strong>Скоро</strong>
+        </div>
+        <div>
+          <span>Загрузка</span>
+          <strong>Скоро</strong>
+        </div>
       </div>
-    </div>
+    </section>
   );
 };
 
