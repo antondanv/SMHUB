@@ -31,6 +31,9 @@ const MainLayout = () => {
               {isAuthenticated ? (
                 <>
                   <li>
+                    <Link to="/profile">Профиль</Link>
+                  </li>
+                  <li>
                     <span className="nav-user">{user.username}</span>
                   </li>
                   <li>
