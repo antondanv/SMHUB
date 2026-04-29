@@ -1,8 +1,19 @@
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/useAuth';
 
 const MainLayout = () => {
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate('/');
+  }
+
   return (
     <div className="app-shell">
+      <div className="background-orb" aria-hidden="true" />
+
       <header className="site-header">
         <div className="site-header__inner">
           <Link to="/" className="brand">
@@ -17,12 +28,22 @@ const MainLayout = () => {
               <li>
                 <Link to="/materials">Материалы</Link>
               </li>
-              <li>
-                <Link to="/register">Регистрация</Link>
-              </li>
-              <li>
-                <Link to="/login">Вход</Link>
-              </li>
+              {isAuthenticated ? (
+                <>
+                  <li>
+                    <span className="nav-user">{user.username}</span>
+                  </li>
+                  <li>
+                    <button className="nav-button" type="button" onClick={handleLogout}>
+                      Выйти
+                    </button>
+                  </li>
+                </>
+              ) : (
+                <li>
+                  <Link to="/login">Войти</Link>
+                </li>
+              )}
             </ul>
           </nav>
         </div>
