@@ -163,6 +163,10 @@ button {
   background: rgba(255, 255, 255, 0.58);
 }
 
+.nav-user:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
 .nav-button {
   border: 0;
   color: var(--muted);
