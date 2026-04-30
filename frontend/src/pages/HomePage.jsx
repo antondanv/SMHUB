@@ -27,10 +27,6 @@ const HomePage = () => {
           <strong>Скоро</strong>
         </div>
         <div>
-          <span>Профиль</span>
-          <strong>Скоро</strong>
-        </div>
-        <div>
           <span>Загрузка</span>
           <strong>Скоро</strong>
         </div>

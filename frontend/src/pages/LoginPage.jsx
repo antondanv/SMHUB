@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../api/apiClient';
 import { registerUser } from '../api/authApi';
 import { useAuth } from '../context/useAuth';
 
@@ -15,23 +16,84 @@ const initialRegisterForm = {
   last_name: '',
   first_name: '',
   middle_name: '',
-  course_id: '',
-  program_id: '',
+  course_value: '',
+  program_value: '',
   group_name: '',
 };
 
-function optionalNumber(value) {
-  return value === '' ? null : Number(value);
+function normalizeValue(value) {
+  return value.trim().toLowerCase();
+}
+
+function getCourseOptionLabel(course) {
+  return `${course.number} курс`;
+}
+
+function resolveCourseId(value, courses) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const normalized = normalizeValue(value);
+
+  const course = courses.find((item) => {
+    const number = String(item.number);
+    const optionLabel = normalizeValue(getCourseOptionLabel(item));
+
+    return normalized === number || normalized === optionLabel;
+  });
+
+  return course ? course.id : undefined;
+}
+
+function getProgramOptionLabel(program) {
+  return `${program.code} - ${program.name}`;
+}
+
+function resolveProgramId(value, programs) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const normalized = normalizeValue(value);
+
+  const program = programs.find((item) => {
+    const optionLabel = normalizeValue(getProgramOptionLabel(item));
+
+    return normalized === optionLabel;
+  });
+
+  return program ? program.id : undefined;
 }
 
 const LoginPage = ({ defaultMode = 'login' }) => {
   const [mode, setMode] = useState(defaultMode);
   const [loginForm, setLoginForm] = useState(initialLoginForm);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
+  const [courses, setCourses] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    async function fetchReferenceData() {
+      try {
+        const [coursesResponse, programsResponse] = await Promise.all([
+          apiClient.get('/courses'),
+          apiClient.get('/programs'),
+        ]);
+
+        setCourses(coursesResponse.data);
+        setPrograms(programsResponse.data);
+      } catch (requestError) {
+        console.error(requestError);
+      }
+    }
+
+    fetchReferenceData();
+  }, []);
 
   function switchMode(nextMode) {
     setMode(nextMode);
@@ -71,6 +133,20 @@ const LoginPage = ({ defaultMode = 'login' }) => {
     setError('');
     setIsSubmitting(true);
 
+    const courseId = resolveCourseId(registerForm.course_value, courses);
+    if (courseId === undefined) {
+      setError('Курс укажите как номер или выберите из подсказок.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const programId = resolveProgramId(registerForm.program_value, programs);
+    if (programId === undefined) {
+      setError('Направление укажите в формате "код - название" или выберите из подсказок.');
+      setIsSubmitting(false);
+      return;
+    }
+
     const payload = {
       email: registerForm.email,
       username: registerForm.username,
@@ -78,8 +154,8 @@ const LoginPage = ({ defaultMode = 'login' }) => {
       last_name: registerForm.last_name,
       first_name: registerForm.first_name,
       middle_name: registerForm.middle_name || null,
-      course_id: optionalNumber(registerForm.course_id),
-      program_id: optionalNumber(registerForm.program_id),
+      course_id: courseId,
+      program_id: programId,
       group_name: registerForm.group_name || null,
     };
 
@@ -242,25 +318,33 @@ const LoginPage = ({ defaultMode = 'login' }) => {
               <label>
                 Курс
                 <input
-                  name="course_id"
-                  type="number"
-                  min="1"
-                  value={registerForm.course_id}
+                  name="course_value"
+                  list="course-options"
+                  value={registerForm.course_value}
                   onChange={handleChange}
-                  placeholder="1"
+                  placeholder="1 или 1 курс"
                 />
+                <datalist id="course-options">
+                  {courses.map((course) => (
+                    <option key={course.id} value={getCourseOptionLabel(course)} />
+                  ))}
+                </datalist>
               </label>
 
               <label>
                 Направление
                 <input
-                  name="program_id"
-                  type="number"
-                  min="1"
-                  value={registerForm.program_id}
+                  name="program_value"
+                  list="program-options"
+                  value={registerForm.program_value}
                   onChange={handleChange}
-                  placeholder="1"
+                  placeholder="09.03.03 - Прикладная информатика"
                 />
+                <datalist id="program-options">
+                  {programs.map((program) => (
+                    <option key={program.id} value={getProgramOptionLabel(program)} />
+                  ))}
+                </datalist>
               </label>
 
               <label>

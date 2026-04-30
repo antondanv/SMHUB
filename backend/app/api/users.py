@@ -81,7 +81,6 @@ def update_my_profile(
                 )
 
         current_user.program_id = program_id
-
     if "group_name" in update_data:
         current_user.group_name = (
             update_data["group_name"].strip()

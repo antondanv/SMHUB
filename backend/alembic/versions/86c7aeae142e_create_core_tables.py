@@ -50,9 +50,9 @@ def upgrade() -> None:
     sa.Column('subject_id', sa.Integer(), nullable=False),
     sa.Column('program_id', sa.Integer(), nullable=False),
     sa.Column('course_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
-    sa.ForeignKeyConstraint(['program_id'], ['programs.id'], ),
-    sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], ),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['program_id'], ['programs.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('subject_id', 'program_id', 'course_id', name='uq_subject_program_course')
     )
@@ -68,8 +68,8 @@ def upgrade() -> None:
     sa.Column('program_id', sa.Integer(), nullable=True),
     sa.Column('group_name', sa.String(length=100), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
-    sa.ForeignKeyConstraint(['program_id'], ['programs.id'], ),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['program_id'], ['programs.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
