@@ -3,6 +3,51 @@ import { Link } from 'react-router-dom';
 import apiClient from '../api/apiClient';
 import { useAuth } from '../context/useAuth';
 
+function normalizeValue(value) {
+  return value.trim().toLowerCase();
+}
+
+function getCourseOptionLabel(course) {
+  return `${course.number} курс`;
+}
+
+function resolveCourseId(value, courses) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const normalized = normalizeValue(value);
+
+  const course = courses.find((item) => {
+    const number = String(item.number);
+    const optionLabel = normalizeValue(getCourseOptionLabel(item));
+
+    return normalized === number || normalized === optionLabel;
+  });
+
+  return course ? course.id : undefined;
+}
+
+function getProgramOptionLabel(program) {
+  return `${program.code} - ${program.name}`;
+}
+
+function resolveProgramId(value, programs) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const normalized = normalizeValue(value);
+
+  const program = programs.find((item) => {
+    const optionLabel = normalizeValue(getProgramOptionLabel(item));
+
+    return normalized === optionLabel;
+  });
+
+  return program ? program.id : undefined;
+}
+
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -17,8 +62,8 @@ const ProfilePage = () => {
     first_name: '',
     last_name: '',
     middle_name: '',
-    course_id: '',
-    program_id: '',
+    course_value: '',
+    program_value: '',
     group_name: ''
   });
 
@@ -35,13 +80,16 @@ const ProfilePage = () => {
         setCourses(coursesRes.data);
         setPrograms(programsRes.data);
 
+        const selectedCourse = coursesRes.data.find((course) => course.id === userRes.data.course_id);
+        const selectedProgram = programsRes.data.find((program) => program.id === userRes.data.program_id);
+
         setFormData({
           username: userRes.data.username || '',
           first_name: userRes.data.first_name || '',
           last_name: userRes.data.last_name || '',
           middle_name: userRes.data.middle_name || '',
-          course_id: userRes.data.course_id || '',
-          program_id: userRes.data.program_id || '',
+          course_value: selectedCourse ? getCourseOptionLabel(selectedCourse) : '',
+          program_value: selectedProgram ? getProgramOptionLabel(selectedProgram) : '',
           group_name: userRes.data.group_name || ''
         });
       } catch (err) {
@@ -69,10 +117,26 @@ const ProfilePage = () => {
     setError(null);
 
     try {
+      const courseId = resolveCourseId(formData.course_value, courses);
+      if (courseId === undefined) {
+        setError('Курс укажите как номер или выберите из подсказок.');
+        return;
+      }
+
+      const programId = resolveProgramId(formData.program_value, programs);
+      if (programId === undefined) {
+        setError('Направление укажите в формате "код - название" или выберите из подсказок.');
+        return;
+      }
+
       const submissionData = {
-        ...formData,
-        course_id: formData.course_id ? Number(formData.course_id) : null,
-        program_id: formData.program_id ? Number(formData.program_id) : null
+        username: formData.username,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        middle_name: formData.middle_name || null,
+        course_id: courseId,
+        program_id: programId,
+        group_name: formData.group_name || null,
       };
 
       const response = await apiClient.patch('/users/me', submissionData);
@@ -187,34 +251,36 @@ const ProfilePage = () => {
 
           <label>
             Курс
-            <select
-              name="course_id"
-              value={formData.course_id}
+            <input
+              type="text"
+              name="course_value"
+              list="profile-course-options"
+              value={formData.course_value}
               onChange={handleChange}
-            >
-              <option value="">Выберите курс</option>
+              placeholder="1 или 1 курс"
+            />
+            <datalist id="profile-course-options">
               {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
+                <option key={course.id} value={getCourseOptionLabel(course)} />
               ))}
-            </select>
+            </datalist>
           </label>
 
           <label>
             Направление
-            <select
-              name="program_id"
-              value={formData.program_id}
+            <input
+              type="text"
+              name="program_value"
+              list="profile-program-options"
+              value={formData.program_value}
               onChange={handleChange}
-            >
-              <option value="">Выберите направление</option>
+              placeholder="09.03.03 - Прикладная информатика"
+            />
+            <datalist id="profile-program-options">
               {programs.map((program) => (
-                <option key={program.id} value={program.id}>
-                  {program.code} - {program.name}
-                </option>
+                <option key={program.id} value={getProgramOptionLabel(program)} />
               ))}
-            </select>
+            </datalist>
           </label>
 
           <label className="form-field--wide">

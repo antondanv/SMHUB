@@ -1,13 +1,17 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
+from app.models.course import Course
+from app.models.program import Program
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.auth import UserLogin, UserRegister
 
 
 DEFAULT_USER_ROLE = "student"
+
 
 def get_user_by_email(db: Session, email: str) -> User | None:
     normalized_email = email.strip().lower()
@@ -35,12 +39,39 @@ def get_student_role(db: Session) -> Role:
 
     return role
 
+
+def validate_course_id(db: Session, course_id: int | None) -> None:
+    if course_id is None:
+        return
+
+    course_exists = db.scalar(
+        select(Course.id).where(Course.id == course_id)
+    )
+
+    if course_exists is None:
+        raise ValueError("Course not found")
+
+
+def validate_program_id(db: Session, program_id: int | None) -> None:
+    if program_id is None:
+        return
+
+    program_exists = db.scalar(
+        select(Program.id).where(Program.id == program_id)
+    )
+
+    if program_exists is None:
+        raise ValueError("Program not found")
+
 def create_user(db: Session, user_data: UserRegister) -> User:
     if get_user_by_email(db, user_data.email) is not None:
         raise ValueError("Email already exists")
     
     if get_user_by_username(db, user_data.username) is not None:
         raise ValueError("Username already exists")
+
+    validate_course_id(db, user_data.course_id)
+    validate_program_id(db, user_data.program_id)
     
     student_role = get_student_role(db)
     
@@ -63,7 +94,12 @@ def create_user(db: Session, user_data: UserRegister) -> User:
     )
     
     db.add(user)
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ValueError("Failed to create user") from exc
     
     db.refresh(user)
     

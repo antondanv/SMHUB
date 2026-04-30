@@ -31,10 +31,9 @@ const MainLayout = () => {
               {isAuthenticated ? (
                 <>
                   <li>
-                    <Link to="/profile">Профиль</Link>
-                  </li>
-                  <li>
-                    <span className="nav-user">{user.username}</span>
+                    <Link to="/profile" className="nav-user">
+                      {user.username}
+                    </Link>
                   </li>
                   <li>
                     <button className="nav-button" type="button" onClick={handleLogout}>
