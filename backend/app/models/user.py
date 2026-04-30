@@ -25,11 +25,11 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     course_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("courses.id"),
+        ForeignKey("courses.id", ondelete="SET NULL"),
         nullable=True,
     )
     program_id: Mapped[int] = mapped_column(
-        ForeignKey("programs.id"),
+        ForeignKey("programs.id", ondelete="SET NULL"),
         nullable=True,
     )
     group_name: Mapped[str] = mapped_column(String(100), nullable=True)
