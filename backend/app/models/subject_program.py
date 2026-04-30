@@ -16,9 +16,18 @@ class SubjectProgram(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    subject_id: Mapped[int] = mapped_column(ForeignKey("subjects.id"), nullable=False)
-    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), nullable=False)
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), nullable=False)
+    subject_id: Mapped[int] = mapped_column(
+        ForeignKey("subjects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    program_id: Mapped[int] = mapped_column(
+        ForeignKey("programs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     subject: Mapped["Subject"] = relationship(back_populates="subject_programs")
     program: Mapped["Program"] = relationship(back_populates="subject_programs")
     course: Mapped["Course"] = relationship(back_populates="subject_programs")

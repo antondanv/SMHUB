@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/ProfilePage';
 
 const StubPage = ({ title, description }) => (
   <section className="stub-page">
@@ -27,22 +29,13 @@ function App() {
           />
           <Route
             path="login"
-            element={
-              <StubPage
-                title="Вход"
-                description="Здесь будет форма входа для студентов и модераторов."
-              />
-            }
+            element={<LoginPage />}
           />
           <Route
             path="register"
-            element={
-              <StubPage
-                title="Регистрация"
-                description="Здесь будет форма создания аккаунта пользователя."
-              />
-            }
+            element={<LoginPage defaultMode="register" />}
           />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Routes>
     </Router>
