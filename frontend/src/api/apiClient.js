@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const defaultBaseURL = isDevelopment ? 'http://localhost:8000' : '/api';
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_URL || defaultBaseURL,
   headers: {
     'Content-Type': 'application/json',
   },
