@@ -4,6 +4,10 @@ import apiClient from '../api/apiClient';
 import { registerUser } from '../api/authApi';
 import { useAuth } from '../context/useAuth';
 
+const isDevelopment = import.meta.env.DEV;
+const DEMO_CREDENTIALS_STORAGE_KEY = 'smhub-dev-demo-credentials';
+const DEMO_PASSWORD = 'demo123';
+
 const initialLoginForm = {
   email: '',
   password: '',
@@ -50,6 +54,51 @@ function getProgramOptionLabel(program) {
   return `${program.code} - ${program.name}`;
 }
 
+function storeDemoCredentials(credentials) {
+  if (!isDevelopment) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(DEMO_CREDENTIALS_STORAGE_KEY, JSON.stringify(credentials));
+  } catch (storageError) {
+    console.error(storageError);
+  }
+}
+
+function getStoredDemoCredentials() {
+  if (!isDevelopment) {
+    return null;
+  }
+
+  try {
+    const storedValue = localStorage.getItem(DEMO_CREDENTIALS_STORAGE_KEY);
+
+    if (!storedValue) {
+      return null;
+    }
+
+    const parsedValue = JSON.parse(storedValue);
+
+    if (
+      typeof parsedValue?.email !== 'string' ||
+      typeof parsedValue?.password !== 'string' ||
+      !parsedValue.email.trim() ||
+      !parsedValue.password.trim()
+    ) {
+      return null;
+    }
+
+    return {
+      email: parsedValue.email,
+      password: parsedValue.password,
+    };
+  } catch (storageError) {
+    console.error(storageError);
+    return null;
+  }
+}
+
 function resolveProgramId(value, programs) {
   if (!value.trim()) {
     return null;
@@ -64,6 +113,24 @@ function resolveProgramId(value, programs) {
   });
 
   return program ? program.id : undefined;
+}
+
+function buildDemoRegisterForm(courses, programs) {
+  const seed = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.slice(-8);
+  const courseValue = courses[0] ? getCourseOptionLabel(courses[0]) : '';
+  const programValue = programs[0] ? getProgramOptionLabel(programs[0]) : '';
+
+  return {
+    email: `demo.${seed}@smhub.local`,
+    username: `demo_${seed}`,
+    password: DEMO_PASSWORD,
+    last_name: 'Тестов',
+    first_name: 'Тимур',
+    middle_name: 'Демо',
+    course_value: courseValue,
+    program_value: programValue,
+    group_name: `DEV-${seed.slice(-3).toUpperCase()}`,
+  };
 }
 
 const LoginPage = ({ defaultMode = 'login' }) => {
@@ -109,6 +176,33 @@ const LoginPage = ({ defaultMode = 'login' }) => {
     }
 
     setRegisterForm((currentForm) => ({ ...currentForm, [name]: value }));
+  }
+
+  function fillLoginWithDemoData() {
+    const storedCredentials = getStoredDemoCredentials();
+
+    if (storedCredentials) {
+      setLoginForm(storedCredentials);
+      setError('');
+      return;
+    }
+
+    setLoginForm({
+      email: 'demo@smhub.local',
+      password: DEMO_PASSWORD,
+    });
+    setError('');
+  }
+
+  function fillRegisterWithDemoData() {
+    const demoRegisterForm = buildDemoRegisterForm(courses, programs);
+
+    setRegisterForm(demoRegisterForm);
+    storeDemoCredentials({
+      email: demoRegisterForm.email,
+      password: demoRegisterForm.password,
+    });
+    setError('');
   }
 
   async function handleLoginSubmit(event) {
@@ -161,6 +255,10 @@ const LoginPage = ({ defaultMode = 'login' }) => {
 
     try {
       await registerUser(payload);
+      storeDemoCredentials({
+        email: registerForm.email,
+        password: registerForm.password,
+      });
       await login({
         email: registerForm.email,
         password: registerForm.password,
@@ -208,6 +306,21 @@ const LoginPage = ({ defaultMode = 'login' }) => {
         <div className="auth-form-frame">
           {isLogin ? (
             <form className="form-grid auth-form-motion" key="login" onSubmit={handleLoginSubmit}>
+              {isDevelopment && (
+                <div className="auth-dev-tools">
+                  <button
+                    className="button button--secondary auth-dev-tools__button"
+                    type="button"
+                    onClick={fillLoginWithDemoData}
+                  >
+                    Подставить демо-логин
+                  </button>
+                  <p className="auth-dev-tools__hint">
+                    В режиме разработки берутся последние демо-данные после регистрации.
+                  </p>
+                </div>
+              )}
+
               <label>
                 Email <span>*</span>
                 <input
@@ -246,6 +359,21 @@ const LoginPage = ({ defaultMode = 'login' }) => {
               key="register"
               onSubmit={handleRegisterSubmit}
             >
+              {isDevelopment && (
+                <div className="auth-dev-tools form-field--wide">
+                  <button
+                    className="button button--secondary auth-dev-tools__button"
+                    type="button"
+                    onClick={fillRegisterWithDemoData}
+                  >
+                    Заполнить демо-данными
+                  </button>
+                  <p className="auth-dev-tools__hint">
+                    Генерируются уникальные тестовые email и username, чтобы не упираться в дубликаты.
+                  </p>
+                </div>
+              )}
+
               <label>
                 Email <span>*</span>
                 <input
