@@ -6,6 +6,8 @@ SMHUB - проект для обмена учебными материалами
 
 ```text
 SMHUB/
+├── docker-compose.yml
+├── run.sh
 ├── backend/
 │   ├── app/
 │   │   ├── api/
@@ -15,12 +17,14 @@ SMHUB/
 │   │   ├── schemas/
 │   │   ├── services/
 │   │   └── main.py
+│   ├── Dockerfile
 │   ├── .env.example
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
 │   ├── public/
 │   ├── index.html
+│   ├── Dockerfile
 │   ├── package.json
 │   └── vite.config.js
 ├── docs/
@@ -37,12 +41,56 @@ SMHUB/
 - проект собран в один репозиторий;
 - создана базовая структура backend на FastAPI;
 - инициализирован frontend на React + Vite;
-- настроен CORS для `http://localhost:5173`;
+- добавлен Docker Compose для кроссплатформенного запуска `db + backend + frontend`;
+- настроен frontend-backend runtime для локального и контейнерного запуска;
 - реализован endpoint проверки состояния `GET /health` на backend;
 - реализована проверка backend на главной странице frontend;
 - актуальные рабочие документы лежат в `docs/`.
 
-## Запуск backend
+## Запуск через Docker
+
+Нужен только установленный Docker Desktop или связка Docker Engine + Docker Compose.
+
+Из корня репозитория:
+
+```bash
+docker compose up --build
+```
+
+Или через обертку:
+
+```bash
+./run.sh
+```
+
+Что поднимется автоматически:
+
+- `db` на `localhost:5432`;
+- `backend` на `http://localhost:8000`;
+- `frontend` на `http://localhost:5173`.
+
+Что делает compose:
+
+- ждёт готовности PostgreSQL;
+- применяет Alembic-миграции;
+- заполняет справочники seed-данными;
+- запускает FastAPI и Vite в dev-режиме с проброшенными портами.
+
+Остановить стек:
+
+```bash
+docker compose down
+```
+
+Если нужно сбросить контейнеры вместе с volume базы данных:
+
+```bash
+docker compose down -v
+```
+
+## Локальный запуск без Docker
+
+### Backend
 
 Backend находится в папке `backend/`.
 
@@ -98,7 +146,7 @@ uvicorn app.main:app --reload --app-dir backend
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - проверка состояния: `http://127.0.0.1:8000/health`
 
-## Запуск frontend
+### Frontend
 
 Frontend находится в папке `frontend/`.
 
@@ -126,8 +174,10 @@ npm run dev
 
 ## Документация
 
+- [GitHub Project Board](https://github.com/users/antondanv/projects/1)
+- [Workflow и процесс работы](docs/WORKFLOW.md)
 - [Общий план](docs/PLAN.md)
 - [API-контракт](docs/API_CONTRACT.md)
-- [Текущий и следующий таск](docs/TASKS.md)
+- [Архив старого task-tracking](docs/TASKS.md)
 - [Идея проекта](docs/IDEA.md)
 - [Заметки по моделям](docs/MODELS.md)

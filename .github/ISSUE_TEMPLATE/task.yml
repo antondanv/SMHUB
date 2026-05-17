@@ -1,0 +1,28 @@
+name: Task
+description: Процессная, инфраструктурная или документационная задача
+title: "Task: "
+labels:
+  - documentation
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Что нужно сделать
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Контекст
+      description: Почему задача появилась и что она разблокирует
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Ожидаемый результат
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true

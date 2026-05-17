@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: SMHUB Workflow
+    url: https://github.com/antondanv/SMHUB/blob/main/docs/WORKFLOW.md
+    about: Проверьте процесс работы, правила по issue и формат PR перед созданием новой задачи.

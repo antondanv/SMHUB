@@ -1,0 +1,85 @@
+name: Feature
+description: Фича или заметный продуктовый кусок работы
+title: "F?: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Цель
+      description: Какую пользовательскую или техническую проблему решаем
+      placeholder: Коротко опишите цель задачи
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Владелец задачи
+      description: Кто делает задачу
+      placeholder: Разработчик 1
+    validations:
+      required: true
+  - type: input
+    id: reviewer
+    attributes:
+      label: Проверяющий
+      description: Кто принимает и ревьюит задачу
+      placeholder: Разработчик 2
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Этап
+      options:
+        - Этап 3. Справочники
+        - Этап 4. Учебные материалы
+        - Этап 5. Взаимодействие с материалами
+        - Этап 6. Главная страница и персонализация
+        - Этап 7. Модерация
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Зона работы
+      options:
+        - Backend
+        - Frontend
+        - Fullstack
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Основные шаги и deliverables
+      placeholder: |
+        - backend endpoint
+        - frontend page
+        - validation
+        - error states
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Критерии готовности
+      placeholder: |
+        - [ ] сценарий работает end-to-end
+        - [ ] ошибки обработаны
+        - [ ] документация обновлена при необходимости
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Проверка
+      description: Как проверить задачу локально
+      placeholder: |
+        1. Запустить backend
+        2. Открыть страницу
+        3. Пройти сценарий
+    validations:
+      required: true
