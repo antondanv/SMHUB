@@ -1,7 +1,6 @@
 from pathlib import Path
-from typing import Optional
 
-from pydantic import Field, AliasChoices
+from pydantic import Field, AliasChoices, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,10 +11,29 @@ ENV_FILE = BASE_DIR / ".env"
 class Settings(BaseSettings):
     app_name: str = "SMHUB"
     app_env: str = "development"
+    auto_db_bootstrap: bool = True
 
-    # Ищем либо DATABASE_URL, либо STORAGE_DATABASE_URL (который создает Vercel для Neon)
-    database_url: str = Field(validation_alias=AliasChoices("database_url", "storage_database_url"))
-    
+    # Для Vercel/Neon предпочитаем direct/unpooled URL, если он доступен.
+    database_url: str = Field(
+        validation_alias=AliasChoices(
+            "storage_database_url_unpooled",
+            "storage_postgres_url_non_pooling",
+            "postgres_url_non_pooling",
+            "database_url",
+            "postgres_url",
+            "storage_database_url",
+            "storage_postgres_url"
+        )
+    )
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def fix_postgres_url(cls, v: str) -> str:
+        """SQLAlchemy требует postgresql:// вместо postgres://"""
+        if v and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
+
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
