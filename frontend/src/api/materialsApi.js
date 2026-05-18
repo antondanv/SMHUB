@@ -19,3 +19,20 @@ export async function createMaterial(materialData) {
 
   return response.data;
 }
+
+export async function getMaterialById(materialId) {
+  const response = await apiClient.get(`/materials/${materialId}`);
+
+  return response.data;
+}
+
+export async function downloadMaterial(materialId) {
+  const response = await apiClient.get(`/materials/${materialId}/download`, {
+    responseType: 'blob',
+  });
+
+  return {
+    blob: response.data,
+    contentType: response.headers['content-type'],
+  };
+}
