@@ -331,3 +331,37 @@ Response `200 OK`:
 Response `200 OK`:
 
 - shape совпадает с `GET /materials`, но содержит только избранные материалы пользователя.
+
+## Главная страница
+
+### `GET /homepage`
+
+Контент главной страницы с простой персонализацией.
+
+Response `200 OK`:
+
+```json
+{
+  "audience": "authenticated",
+  "latest": [],
+  "popular": [],
+  "subjects": [
+    { "id": 4, "name": "Базы данных", "materials_count": 6 }
+  ],
+  "course_materials": [],
+  "program_materials": [],
+  "related_materials": [],
+  "popular_in_course": [],
+  "rules": [
+    "Гостю показываются последние и популярные опубликованные материалы, а также самые наполненные предметы.",
+    "Авторизованному пользователю дополнительно показываются материалы его курса и направления."
+  ]
+}
+```
+
+Правила персонализации:
+
+- гость получает `latest`, `popular`, `subjects`;
+- авторизованный пользователь дополнительно получает `course_materials`, `program_materials`, `related_materials`, `popular_in_course`;
+- `related_materials` строится по совпадению `course_id + program_id`;
+- если у пользователя не заполнены `course_id` или `program_id`, соответствующие блоки приходят пустыми.
