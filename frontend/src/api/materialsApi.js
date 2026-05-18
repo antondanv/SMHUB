@@ -76,3 +76,15 @@ export async function getMyFavorites() {
 
   return response.data;
 }
+
+export async function getModerationQueue() {
+  const response = await apiClient.get('/moderation/materials');
+
+  return response.data;
+}
+
+export async function moderateMaterial(materialId, status) {
+  const response = await apiClient.patch(`/moderation/materials/${materialId}`, { status });
+
+  return response.data;
+}

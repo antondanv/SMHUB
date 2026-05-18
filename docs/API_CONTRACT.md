@@ -365,3 +365,53 @@ Response `200 OK`:
 - авторизованный пользователь дополнительно получает `course_materials`, `program_materials`, `related_materials`, `popular_in_course`;
 - `related_materials` строится по совпадению `course_id + program_id`;
 - если у пользователя не заполнены `course_id` или `program_id`, соответствующие блоки приходят пустыми.
+
+## Модерация
+
+### `GET /moderation/materials`
+
+Очередь материалов со статусом `pending`.
+
+- требует `Authorization: Bearer <token>`
+- доступ только `moderator` и `admin`
+
+Response `200 OK`:
+
+```json
+{
+  "items": [],
+  "total": 0
+}
+```
+
+`items[]` использует тот же shape, что и `GET /materials`.
+
+### `PATCH /moderation/materials/{id}`
+
+Изменить модерационный статус материала.
+
+- требует `Authorization: Bearer <token>`
+- доступ только `moderator` и `admin`
+
+Request:
+
+```json
+{
+  "status": "published"
+}
+```
+
+Допустимые значения `status`:
+
+- `published`
+- `rejected`
+- `archived`
+
+Дополнительная логика:
+
+- при переводе в `published` backend выставляет `published_at`;
+- при переводе в `rejected` backend сбрасывает `published_at`.
+
+Response `200 OK`:
+
+- shape совпадает с `GET /materials/{id}`.

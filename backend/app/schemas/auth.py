@@ -37,6 +37,7 @@ class AuthUserResponse(BaseModel):
     middle_name: str | None
     
     role_id: int
+    role_name: str | None
     is_active: bool
     
     course_id: int | None
