@@ -287,3 +287,47 @@ Response `204 No Content`
 Дополнительная логика:
 
 - при удалении уменьшается `comments_count`.
+
+## Избранное
+
+### `POST /materials/{id}/favorite`
+
+Добавить материал в избранное текущего пользователя.
+
+- требует `Authorization: Bearer <token>`
+
+Response `200 OK`:
+
+```json
+{
+  "material_id": 12,
+  "is_favorite": true,
+  "favorites_count": 4
+}
+```
+
+### `DELETE /materials/{id}/favorite`
+
+Убрать материал из избранного текущего пользователя.
+
+- требует `Authorization: Bearer <token>`
+
+Response `200 OK`:
+
+```json
+{
+  "material_id": 12,
+  "is_favorite": false,
+  "favorites_count": 3
+}
+```
+
+### `GET /users/me/favorites`
+
+Список избранных материалов текущего пользователя.
+
+- требует `Authorization: Bearer <token>`
+
+Response `200 OK`:
+
+- shape совпадает с `GET /materials`, но содержит только избранные материалы пользователя.

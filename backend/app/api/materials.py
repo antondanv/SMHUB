@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import get_current_user, get_optional_user
 from app.api.materials_common import (
     assert_material_is_visible,
+    fetch_favorite_ids,
     get_material_or_404,
     get_status_or_500,
     serialize_material,
@@ -20,13 +21,18 @@ from app.core.config import BASE_DIR
 from app.db.database import get_db
 from app.models.course import Course
 from app.models.enums import MaterialStatus as MaterialStatusEnum
+from app.models.favorite import Favorite
 from app.models.material import Material
 from app.models.material_type import MaterialType
 from app.models.mime_type import MimeType
 from app.models.program import Program
 from app.models.subject import Subject
 from app.models.user import User
-from app.schemas.material import MaterialCreateResponse, MaterialSummaryResponse
+from app.schemas.material import (
+    FavoriteToggleResponse,
+    MaterialCreateResponse,
+    MaterialSummaryResponse,
+)
 
 
 router = APIRouter(prefix="/materials", tags=["materials"])
@@ -206,6 +212,64 @@ async def create_material(
     return build_material_create_response(material)
 
 
+@router.post("/{material_id}/favorite", response_model=FavoriteToggleResponse)
+def add_material_to_favorites(
+    material_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FavoriteToggleResponse:
+    material = get_material_or_404(db, material_id)
+    assert_material_is_visible(material, current_user)
+
+    existing_favorite = db.scalar(
+        select(Favorite).where(
+            Favorite.user_id == current_user.id,
+            Favorite.material_id == material.id,
+        )
+    )
+
+    if existing_favorite is None:
+        db.add(Favorite(user_id=current_user.id, material_id=material.id))
+        material.favorites_count += 1
+        db.commit()
+        db.refresh(material)
+
+    return FavoriteToggleResponse(
+        material_id=material.id,
+        is_favorite=True,
+        favorites_count=material.favorites_count,
+    )
+
+
+@router.delete("/{material_id}/favorite", response_model=FavoriteToggleResponse)
+def remove_material_from_favorites(
+    material_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FavoriteToggleResponse:
+    material = get_material_or_404(db, material_id)
+    assert_material_is_visible(material, current_user)
+
+    existing_favorite = db.scalar(
+        select(Favorite).where(
+            Favorite.user_id == current_user.id,
+            Favorite.material_id == material.id,
+        )
+    )
+
+    if existing_favorite is not None:
+        db.delete(existing_favorite)
+        material.favorites_count = max(material.favorites_count - 1, 0)
+        db.commit()
+        db.refresh(material)
+
+    return FavoriteToggleResponse(
+        material_id=material.id,
+        is_favorite=False,
+        favorites_count=material.favorites_count,
+    )
+
+
 @router.get("/{material_id}/download")
 def download_material(
     material_id: int,
@@ -246,4 +310,12 @@ def get_material_detail(
     db.commit()
     db.refresh(material)
 
-    return serialize_material(material)
+    favorite_ids = set()
+
+    if current_user is not None:
+        favorite_ids = fetch_favorite_ids(db, current_user.id, [material.id])
+
+    return serialize_material(
+        material,
+        is_favorite=material.id in favorite_ids,
+    )

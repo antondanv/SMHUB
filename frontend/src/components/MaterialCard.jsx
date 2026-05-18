@@ -1,7 +1,21 @@
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 
-function MaterialCard({ material, showStatus = false, actionLabel = 'Открыть' }) {
+function MaterialCard({
+  material,
+  showStatus = false,
+  actionLabel = 'Открыть',
+  onToggleFavorite,
+  isFavoritePending = false,
+}) {
+  async function handleFavoriteClick() {
+    if (!onToggleFavorite) {
+      return;
+    }
+
+    await onToggleFavorite(material);
+  }
+
   return (
     <article className="material-card">
       <div className="material-card__top">
@@ -13,6 +27,8 @@ function MaterialCard({ material, showStatus = false, actionLabel = 'Откры�
           className={`bookmark-button${material.isFavorite ? ' is-active' : ''}`}
           type="button"
           aria-label={material.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+          disabled={isFavoritePending}
+          onClick={handleFavoriteClick}
         >
           {material.isFavorite ? 'Сохранено' : 'Сохранить'}
         </button>
@@ -43,7 +59,11 @@ function MaterialCard({ material, showStatus = false, actionLabel = 'Откры�
         <div className="metric-row">
           <span>{material.views} просмотров</span>
           <span>{material.downloads} скачиваний</span>
-          <span>{material.rating} ★</span>
+          <span>
+            {typeof material.favoritesCount === 'number'
+              ? `${material.favoritesCount} в избранном`
+              : `${material.rating} ★`}
+          </span>
         </div>
       </div>
 
