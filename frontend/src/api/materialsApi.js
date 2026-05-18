@@ -36,3 +36,25 @@ export async function downloadMaterial(materialId) {
     contentType: response.headers['content-type'],
   };
 }
+
+export async function getMaterialComments(materialId) {
+  const response = await apiClient.get(`/materials/${materialId}/comments`);
+
+  return response.data;
+}
+
+export async function createMaterialComment(materialId, content) {
+  const response = await apiClient.post(`/materials/${materialId}/comments`, { content });
+
+  return response.data;
+}
+
+export async function updateMaterialComment(commentId, content) {
+  const response = await apiClient.patch(`/comments/${commentId}`, { content });
+
+  return response.data;
+}
+
+export async function deleteMaterialComment(commentId) {
+  await apiClient.delete(`/comments/${commentId}`);
+}

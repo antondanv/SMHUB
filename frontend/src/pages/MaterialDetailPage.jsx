@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { downloadMaterial, getMaterialById } from '../api/materialsApi';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  createMaterialComment,
+  deleteMaterialComment,
+  downloadMaterial,
+  getMaterialById,
+  getMaterialComments,
+  updateMaterialComment,
+} from '../api/materialsApi';
 import StatusBadge from '../components/StatusBadge';
+import { useAuth } from '../context/useAuth';
 
 function formatDate(dateString) {
   if (!dateString) {
@@ -56,9 +64,16 @@ function getErrorMessage(error, fallbackMessage) {
 
 const MaterialDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
   const [material, setMaterial] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingContent, setEditingContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloadPending, setIsDownloadPending] = useState(false);
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState(null);
   const [actionMessage, setActionMessage] = useState('');
@@ -70,12 +85,17 @@ const MaterialDetailPage = () => {
       setIsLoading(true);
       setError('');
       setErrorCode(null);
+      setActionMessage('');
 
       try {
-        const materialResponse = await getMaterialById(id);
+        const [materialResponse, commentsResponse] = await Promise.all([
+          getMaterialById(id),
+          getMaterialComments(id),
+        ]);
 
         if (isActive) {
           setMaterial(materialResponse);
+          setComments(commentsResponse);
         }
       } catch (requestError) {
         if (isActive) {
@@ -136,7 +156,100 @@ const MaterialDetailPage = () => {
     }
   }
 
-  if (isLoading) {
+  async function handleCommentSubmit(event) {
+    event.preventDefault();
+
+    if (!commentDraft.trim()) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setActionMessage('');
+    setIsCommentSubmitting(true);
+
+    try {
+      const createdComment = await createMaterialComment(id, commentDraft.trim());
+
+      setComments((currentComments) => [...currentComments, createdComment]);
+      setMaterial((currentMaterial) => ({
+        ...currentMaterial,
+        comments_count: currentMaterial.comments_count + 1,
+      }));
+      setCommentDraft('');
+    } catch (requestError) {
+      setActionMessage(
+        getErrorMessage(
+          requestError,
+          'Не удалось отправить комментарий. Попробуйте позже.'
+        )
+      );
+    } finally {
+      setIsCommentSubmitting(false);
+    }
+  }
+
+  function startEditingComment(comment) {
+    setEditingCommentId(comment.id);
+    setEditingContent(comment.content);
+    setActionMessage('');
+  }
+
+  function cancelEditingComment() {
+    setEditingCommentId(null);
+    setEditingContent('');
+  }
+
+  async function handleCommentUpdate(commentId) {
+    if (!editingContent.trim()) {
+      return;
+    }
+
+    setActionMessage('');
+
+    try {
+      const updatedComment = await updateMaterialComment(commentId, editingContent.trim());
+
+      setComments((currentComments) =>
+        currentComments.map((comment) => (comment.id === commentId ? updatedComment : comment))
+      );
+      cancelEditingComment();
+    } catch (requestError) {
+      setActionMessage(
+        getErrorMessage(
+          requestError,
+          'Не удалось сохранить изменения комментария.'
+        )
+      );
+    }
+  }
+
+  async function handleCommentDelete(commentId) {
+    setActionMessage('');
+
+    try {
+      await deleteMaterialComment(commentId);
+      setComments((currentComments) =>
+        currentComments.filter((comment) => comment.id !== commentId)
+      );
+      setMaterial((currentMaterial) => ({
+        ...currentMaterial,
+        comments_count: Math.max(currentMaterial.comments_count - 1, 0),
+      }));
+    } catch (requestError) {
+      setActionMessage(
+        getErrorMessage(
+          requestError,
+          'Не удалось удалить комментарий.'
+        )
+      );
+    }
+  }
+
+  if (isLoading || isAuthLoading) {
     return (
       <section className="page-shell">
         <div className="surface-card surface-card--single">
@@ -226,12 +339,102 @@ const MaterialDetailPage = () => {
 
           <div className="surface-card">
             <div className="section-heading section-heading--compact">
-              <h2>Дальнейшее расширение</h2>
+              <h2>Отзывы и обсуждение</h2>
             </div>
 
-            <div className="inline-alert">
-              Эта страница уже подключена к реальному detail/download API. Комментарии, лайки,
-              рейтинг и избранное будут добавлены следующими задачами.
+            <div className="rating-summary">
+              <strong>{material.comments_count}</strong>
+              <div>
+                <div className="rating-stars">Комментарии</div>
+                <span>Лайки, рейтинг и избранное будут добавлены следующими задачами.</span>
+              </div>
+            </div>
+
+            <div className="comment-compose">
+              <div className="header-avatar">
+                {user?.first_name?.[0] || user?.username?.[0] || 'U'}
+              </div>
+              <form className="comment-compose__form" onSubmit={handleCommentSubmit}>
+                <textarea
+                  placeholder={
+                    isAuthenticated
+                      ? 'Добавьте комментарий или вопрос...'
+                      : 'Войдите, чтобы оставить комментарий.'
+                  }
+                  rows={4}
+                  value={commentDraft}
+                  onChange={(event) => setCommentDraft(event.target.value)}
+                  disabled={!isAuthenticated || isCommentSubmitting}
+                />
+                <div className="comment-compose__actions">
+                  <button className="button button--primary" type="submit" disabled={!isAuthenticated || isCommentSubmitting}>
+                    {isCommentSubmitting ? 'Отправляем...' : 'Отправить'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="comment-list">
+              {comments.length > 0 ? (
+                comments.map((comment) => (
+                  <article className="comment-card" key={comment.id}>
+                    <div className="comment-card__head">
+                      <strong>{comment.author.full_name}</strong>
+                      <span>{formatDate(comment.updated_at || comment.created_at)}</span>
+                    </div>
+
+                    {editingCommentId === comment.id ? (
+                      <>
+                        <textarea
+                          rows={4}
+                          value={editingContent}
+                          onChange={(event) => setEditingContent(event.target.value)}
+                        />
+                        <div className="comment-compose__actions">
+                          <button
+                            className="button button--primary"
+                            type="button"
+                            onClick={() => handleCommentUpdate(comment.id)}
+                          >
+                            Сохранить
+                          </button>
+                          <button
+                            className="button button--ghost"
+                            type="button"
+                            onClick={cancelEditingComment}
+                          >
+                            Отменить
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p>{comment.content}</p>
+                        {comment.can_edit && (
+                          <div className="comment-compose__actions">
+                            <button
+                              className="button button--ghost"
+                              type="button"
+                              onClick={() => startEditingComment(comment)}
+                            >
+                              Редактировать
+                            </button>
+                            <button
+                              className="button button--ghost"
+                              type="button"
+                              onClick={() => handleCommentDelete(comment.id)}
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </article>
+                ))
+              ) : (
+                <div className="empty-inline">Пока нет комментариев. Начните обсуждение первым.</div>
+              )}
             </div>
           </div>
         </div>
@@ -278,8 +481,8 @@ const MaterialDetailPage = () => {
                 <strong>{material.downloads_count}</strong>
               </div>
               <div>
-                <span>Избранное</span>
-                <strong>{material.favorites_count}</strong>
+                <span>Комментарии</span>
+                <strong>{material.comments_count}</strong>
               </div>
             </div>
           </div>
