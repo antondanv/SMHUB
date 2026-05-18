@@ -140,3 +140,76 @@ Response `201 Created`:
 - `400 Bad Request` — невалидные поля, несуществующий справочник, неподдерживаемый тип файла, пустой файл, превышение лимита размера
 - `401 Unauthorized` — пользователь не авторизован
 - `500 Internal Server Error` — не удалось сохранить материал
+
+### `GET /materials/{id}`
+
+Детальная карточка материала.
+
+Правила доступа:
+
+- гость и обычный пользователь видят только `published`;
+- автор, `moderator` и `admin` могут открывать скрытые статусы своего или модерируемого материала.
+
+Дополнительная логика:
+
+- при успешном открытии увеличивается `views_count`.
+
+Response `200 OK`:
+
+```json
+{
+  "id": 12,
+  "title": "Конспект по базам данных",
+  "description": "Разбор основных тем и примеров.",
+  "status": "published",
+  "mime_type": "application/pdf",
+  "file_url": "uploads/materials/4f0bf5c611eb40a6a7f1ce76f7d14d0f.pdf",
+  "file_name": "db-notes.pdf",
+  "file_size": 182944,
+  "views_count": 14,
+  "downloads_count": 5,
+  "likes_count": 0,
+  "comments_count": 0,
+  "favorites_count": 0,
+  "published_at": "2026-05-18T10:00:00Z",
+  "created_at": "2026-05-18T10:00:00Z",
+  "updated_at": "2026-05-18T10:00:00Z",
+  "author": {
+    "id": 3,
+    "username": "anton",
+    "full_name": "Данилов Антон"
+  },
+  "subject": { "id": 4, "name": "Базы данных" },
+  "material_type": { "id": 2, "name": "Конспект" },
+  "course": { "id": 2, "name": "2 курс", "number": 2 },
+  "program": {
+    "id": 2,
+    "name": "Прикладная информатика",
+    "code": "09.03.03"
+  }
+}
+```
+
+Возможные ошибки:
+
+- `403 Forbidden` — нет доступа к скрытому материалу
+- `404 Not Found` — материал не найден
+
+### `GET /materials/{id}/download`
+
+Скачивание файла материала.
+
+Правила доступа такие же, как у `GET /materials/{id}`.
+
+Дополнительная логика:
+
+- при успешном скачивании увеличивается `downloads_count`.
+
+Response `200 OK`:
+
+- бинарный файл с оригинальным `file_name`.
+
+Возможные ошибки:
+
+- `403 Forbidden` — нет доступа к скрытому материалу
+- `404 Not Found` — материал или файл не найдены
