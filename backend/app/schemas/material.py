@@ -1,6 +1,16 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
+
+
+class MaterialUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    subject_id: Optional[int] = None
+    material_type_id: Optional[int] = None
+    course_id: Optional[int] = None
+    program_id: Optional[int] = None
 
 
 class MaterialCreateResponse(BaseModel):
@@ -73,6 +83,10 @@ class MaterialSummaryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime | None
     is_favorite: bool = False
+    is_liked: bool = False
+    avg_rating: float | None = None
+    ratings_count: int = 0
+    user_rating: int | None = None
     author: MaterialAuthorResponse
     subject: SubjectBriefResponse
     material_type: MaterialTypeBriefResponse

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import LikeButton from './LikeButton';
 import StatusBadge from './StatusBadge';
 
 function MaterialCard({
@@ -64,6 +65,11 @@ function MaterialCard({
               ? `${material.favoritesCount} в избранном`
               : `${material.rating} ★`}
           </span>
+          <LikeButton
+            materialId={material.id}
+            initialCount={material.likes || 0}
+            initialIsLiked={material.isLiked || false}
+          />
         </div>
       </div>
 

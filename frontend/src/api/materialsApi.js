@@ -1,5 +1,49 @@
 import apiClient from './apiClient';
 
+export async function getMyMaterials(params = {}) {
+  const response = await apiClient.get('/materials/me', { params });
+  return response.data;
+}
+
+export async function getMaterials(params = {}) {
+  const response = await apiClient.get('/materials', { params });
+  return response.data;
+}
+
+export async function rateMaterial(id, value) {
+  const response = await apiClient.post(`/materials/${id}/rating`, null, { params: { value } });
+  return response.data;
+}
+
+export async function updateRating(id, value) {
+  const response = await apiClient.patch(`/materials/${id}/rating`, null, { params: { value } });
+  return response.data;
+}
+
+export async function likeMaterial(id) {
+  const response = await apiClient.post(`/materials/${id}/like`);
+  return response.data;
+}
+
+export async function unlikeMaterial(id) {
+  const response = await apiClient.delete(`/materials/${id}/like`);
+  return response.data;
+}
+
+export async function getMaterialById(id) {
+  const response = await apiClient.get(`/materials/${id}`);
+  return response.data;
+}
+
+export async function updateMaterial(id, data) {
+  const response = await apiClient.patch(`/materials/${id}`, data);
+  return response.data;
+}
+
+export async function deleteMaterial(id) {
+  await apiClient.delete(`/materials/${id}`);
+}
+
 export async function createMaterial(materialData) {
   const formData = new FormData();
 
@@ -16,12 +60,6 @@ export async function createMaterial(materialData) {
       'Content-Type': 'multipart/form-data',
     },
   });
-
-  return response.data;
-}
-
-export async function getMaterialById(materialId) {
-  const response = await apiClient.get(`/materials/${materialId}`);
 
   return response.data;
 }

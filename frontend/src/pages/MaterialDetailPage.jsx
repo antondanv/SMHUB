@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   addMaterialToFavorites,
   createMaterialComment,
+  deleteMaterial,
   deleteMaterialComment,
   downloadMaterial,
   getMaterialById,
@@ -10,6 +11,8 @@ import {
   removeMaterialFromFavorites,
   updateMaterialComment,
 } from '../api/materialsApi';
+import LikeButton from '../components/LikeButton';
+import RatingStars from '../components/RatingStars';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/useAuth';
 
@@ -77,6 +80,8 @@ const MaterialDetailPage = () => {
   const [isDownloadPending, setIsDownloadPending] = useState(false);
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [isFavoritePending, setIsFavoritePending] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState(null);
   const [actionMessage, setActionMessage] = useState('');
@@ -191,6 +196,21 @@ const MaterialDetailPage = () => {
       );
     } finally {
       setIsFavoritePending(false);
+    }
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    setActionMessage('');
+    try {
+      await deleteMaterial(id);
+      navigate('/materials');
+    } catch (requestError) {
+      setActionMessage(
+        getErrorMessage(requestError, 'Не удалось удалить материал.')
+      );
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   }
 
@@ -318,6 +338,14 @@ const MaterialDetailPage = () => {
     );
   }
 
+  const canEdit =
+    !!user &&
+    (user.id === material.author?.id ||
+      user.role_name === 'admin' ||
+      user.role_name === 'moderator' ||
+      user.role === 'admin' ||
+      user.role === 'moderator');
+
   return (
     <section className="page-shell">
       <div className="detail-stitch-layout">
@@ -352,11 +380,56 @@ const MaterialDetailPage = () => {
                 >
                   {material.is_favorite ? 'Убрать из избранного' : 'Сохранить'}
                 </button>
+                <LikeButton
+                  materialId={material.id}
+                  initialCount={material.likes_count}
+                  initialIsLiked={material.is_liked}
+                />
+                {canEdit && (
+                  <>
+                    <Link
+                      className="button button--ghost"
+                      to={`/materials/${id}/edit`}
+                    >
+                      Редактировать
+                    </Link>
+                    <button
+                      className="button button--danger"
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      Удалить
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           {actionMessage && <div className="inline-alert inline-alert--warning">{actionMessage}</div>}
+
+          {showDeleteConfirm && (
+            <div className="surface-card">
+              <p>Вы уверены, что хотите удалить материал? Это действие необратимо.</p>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <button
+                  className="button button--danger"
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                >
+                  {isDeleting ? 'Удаление...' : 'Да, удалить'}
+                </button>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="preview-card">
             <div className="preview-card__toolbar">
@@ -386,11 +459,12 @@ const MaterialDetailPage = () => {
             </div>
 
             <div className="rating-summary">
-              <strong>{material.comments_count}</strong>
-              <div>
-                <div className="rating-stars">Комментарии</div>
-                <span>Лайки, рейтинг и избранное будут добавлены следующими задачами.</span>
-              </div>
+              <RatingStars
+                materialId={material.id}
+                initialAvg={material.avg_rating}
+                initialCount={material.ratings_count}
+                initialUserRating={material.user_rating}
+              />
             </div>
 
             <div className="comment-compose">
@@ -509,6 +583,10 @@ const MaterialDetailPage = () => {
                 <dd>{material.material_type.name}</dd>
               </div>
               <div>
+                <dt>Размер</dt>
+                <dd>{formatFileSize(material.file_size)}</dd>
+              </div>
+              <div>
                 <dt>Дата добавления</dt>
                 <dd>{formatDate(material.published_at || material.created_at)}</dd>
               </div>
@@ -522,6 +600,10 @@ const MaterialDetailPage = () => {
               <div>
                 <span>Скачивания</span>
                 <strong>{material.downloads_count}</strong>
+              </div>
+              <div>
+                <span>Лайки</span>
+                <strong>{material.likes_count}</strong>
               </div>
               <div>
                 <span>Комментарии</span>
