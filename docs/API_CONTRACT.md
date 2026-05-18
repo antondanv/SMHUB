@@ -213,3 +213,77 @@ Response `200 OK`:
 
 - `403 Forbidden` — нет доступа к скрытому материалу
 - `404 Not Found` — материал или файл не найдены
+
+## Комментарии
+
+### `GET /materials/{id}/comments`
+
+Список неудалённых комментариев материала.
+
+Response `200 OK`:
+
+```json
+[
+  {
+    "id": 5,
+    "material_id": 12,
+    "content": "Полезный материал, спасибо!",
+    "created_at": "2026-05-18T11:00:00Z",
+    "updated_at": "2026-05-18T11:00:00Z",
+    "can_edit": true,
+    "author": {
+      "id": 7,
+      "username": "student1",
+      "full_name": "Иванов Иван"
+    }
+  }
+]
+```
+
+### `POST /materials/{id}/comments`
+
+Создание комментария.
+
+- требует `Authorization: Bearer <token>`
+
+Request:
+
+```json
+{
+  "content": "Полезный материал, спасибо!"
+}
+```
+
+Response `201 Created`:
+
+- shape совпадает с элементом списка комментариев.
+
+Дополнительная логика:
+
+- при создании увеличивается `comments_count`.
+
+### `PATCH /comments/{id}`
+
+Редактирование комментария владельцем, `moderator` или `admin`.
+
+Request:
+
+```json
+{
+  "content": "Обновлённый текст комментария"
+}
+```
+
+Response `200 OK`:
+
+- shape совпадает с элементом списка комментариев.
+
+### `DELETE /comments/{id}`
+
+Мягкое удаление комментария владельцем, `moderator` или `admin`.
+
+Response `204 No Content`
+
+Дополнительная логика:
+
+- при удалении уменьшается `comments_count`.
