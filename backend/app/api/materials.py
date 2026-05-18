@@ -1,24 +1,32 @@
+from __future__ import annotations
+
 from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_optional_user
+from app.api.materials_common import (
+    assert_material_is_visible,
+    get_material_or_404,
+    get_status_or_500,
+    serialize_material,
+)
 from app.core.config import BASE_DIR
 from app.db.database import get_db
 from app.models.course import Course
 from app.models.enums import MaterialStatus as MaterialStatusEnum
 from app.models.material import Material
-from app.models.material_status import MaterialStatus
 from app.models.material_type import MaterialType
 from app.models.mime_type import MimeType
 from app.models.program import Program
 from app.models.subject import Subject
 from app.models.user import User
-from app.schemas.material import MaterialCreateResponse
+from app.schemas.material import MaterialCreateResponse, MaterialSummaryResponse
 
 
 router = APIRouter(prefix="/materials", tags=["materials"])
@@ -27,7 +35,7 @@ MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 UPLOADS_DIR = BASE_DIR / "uploads" / "materials"
 
 
-def build_material_response(material: Material) -> MaterialCreateResponse:
+def build_material_create_response(material: Material) -> MaterialCreateResponse:
     return MaterialCreateResponse(
         id=material.id,
         title=material.title,
@@ -135,17 +143,7 @@ async def create_material(
     require_entity(db, Program, program_id, "Program not found")
 
     mime_type = resolve_mime_type(db, original_file_name, file.content_type)
-    pending_status = db.scalar(
-        select(MaterialStatus).where(
-            MaterialStatus.name == MaterialStatusEnum.PENDING.value
-        )
-    )
-
-    if pending_status is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Pending status is not configured",
-        )
+    pending_status = get_status_or_500(db, MaterialStatusEnum.PENDING)
 
     file_bytes = await file.read()
     file_size = len(file_bytes)
@@ -205,4 +203,47 @@ async def create_material(
 
     db.refresh(material)
 
-    return build_material_response(material)
+    return build_material_create_response(material)
+
+
+@router.get("/{material_id}/download")
+def download_material(
+    material_id: int,
+    current_user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    material = get_material_or_404(db, material_id)
+    assert_material_is_visible(material, current_user)
+
+    file_path = BASE_DIR / material.file_url
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material file not found",
+        )
+
+    material.downloads_count += 1
+    db.commit()
+
+    return FileResponse(
+        path=file_path,
+        filename=material.file_name,
+        media_type=material.mime_type.name,
+    )
+
+
+@router.get("/{material_id}", response_model=MaterialSummaryResponse)
+def get_material_detail(
+    material_id: int,
+    current_user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> MaterialSummaryResponse:
+    material = get_material_or_404(db, material_id)
+    assert_material_is_visible(material, current_user)
+
+    material.views_count += 1
+    db.commit()
+    db.refresh(material)
+
+    return serialize_material(material)
