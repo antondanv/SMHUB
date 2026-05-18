@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MaterialCreateResponse(BaseModel):
@@ -77,3 +77,27 @@ class MaterialSummaryResponse(BaseModel):
     material_type: MaterialTypeBriefResponse
     course: CourseBriefResponse
     program: ProgramBriefResponse
+
+
+class CommentAuthorResponse(BaseModel):
+    id: int
+    username: str
+    full_name: str
+
+
+class CommentResponse(BaseModel):
+    id: int
+    material_id: int
+    content: str
+    created_at: datetime
+    updated_at: datetime | None
+    author: CommentAuthorResponse
+    can_edit: bool = False
+
+
+class CommentCreateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=5000)
+
+
+class CommentUpdateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=5000)
