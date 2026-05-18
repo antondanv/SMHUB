@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.courses import router as courses_router
+from app.api.materials import router as materials_router
 from app.api.material_types import router as material_types_router
 from app.api.programs import router as programs_router
 from app.api.subjects import router as subjects_router
@@ -30,6 +31,7 @@ app.include_router(courses_router)
 app.include_router(programs_router)
 app.include_router(subjects_router)
 app.include_router(material_types_router)
+app.include_router(materials_router)
 
 
 @app.get("/health")
