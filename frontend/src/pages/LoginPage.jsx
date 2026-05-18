@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
 import { registerUser } from '../api/authApi';
 import { useAuth } from '../context/useAuth';
+import heroImage from '../assets/hero.png';
 
 const isDevelopment = import.meta.env.DEV;
 const DEMO_CREDENTIALS_STORAGE_KEY = 'smhub-dev-demo-credentials';
@@ -33,6 +34,10 @@ function getCourseOptionLabel(course) {
   return `${course.number} курс`;
 }
 
+function getProgramOptionLabel(program) {
+  return `${program.code} - ${program.name}`;
+}
+
 function resolveCourseId(value, courses) {
   if (!value.trim()) {
     return null;
@@ -50,8 +55,17 @@ function resolveCourseId(value, courses) {
   return course ? course.id : undefined;
 }
 
-function getProgramOptionLabel(program) {
-  return `${program.code} - ${program.name}`;
+function resolveProgramId(value, programs) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const normalized = normalizeValue(value);
+  const program = programs.find(
+    (item) => normalizeValue(getProgramOptionLabel(item)) === normalized
+  );
+
+  return program ? program.id : undefined;
 }
 
 function storeDemoCredentials(credentials) {
@@ -89,36 +103,15 @@ function getStoredDemoCredentials() {
       return null;
     }
 
-    return {
-      email: parsedValue.email,
-      password: parsedValue.password,
-    };
+    return parsedValue;
   } catch (storageError) {
     console.error(storageError);
     return null;
   }
 }
 
-function resolveProgramId(value, programs) {
-  if (!value.trim()) {
-    return null;
-  }
-
-  const normalized = normalizeValue(value);
-
-  const program = programs.find((item) => {
-    const optionLabel = normalizeValue(getProgramOptionLabel(item));
-
-    return normalized === optionLabel;
-  });
-
-  return program ? program.id : undefined;
-}
-
 function buildDemoRegisterForm(courses, programs) {
   const seed = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.slice(-8);
-  const courseValue = courses[0] ? getCourseOptionLabel(courses[0]) : '';
-  const programValue = programs[0] ? getProgramOptionLabel(programs[0]) : '';
 
   return {
     email: `demo.${seed}@smhub.local`,
@@ -127,8 +120,8 @@ function buildDemoRegisterForm(courses, programs) {
     last_name: 'Тестов',
     first_name: 'Тимур',
     middle_name: 'Демо',
-    course_value: courseValue,
-    program_value: programValue,
+    course_value: courses[0] ? getCourseOptionLabel(courses[0]) : '',
+    program_value: programs[0] ? getProgramOptionLabel(programs[0]) : '',
     group_name: `DEV-${seed.slice(-3).toUpperCase()}`,
   };
 }
@@ -274,183 +267,204 @@ const LoginPage = ({ defaultMode = 'login' }) => {
   const isLogin = mode === 'login';
 
   return (
-    <section className="auth-page auth-page--wide">
-      <div className="auth-card auth-card--compact">
-        <div className="auth-card__header">
-          <p className="eyebrow">Аккаунт SMHUB</p>
-          <h1>{isLogin ? 'Вход' : 'Регистрация'}</h1>
-          <p className="form-intro">
-            {isLogin
-              ? 'Продолжайте работу с учебными материалами.'
-              : 'Создайте аккаунт, чтобы пользоваться платформой.'}
-          </p>
-        </div>
+    <section className="page-shell">
+      <div className="auth-shell">
+        <aside className="auth-aside">
+          <div className="auth-aside__content">
+            <div className="section-heading section-heading--compact">
+              <p className="caps-label">SMHUB для студентов</p>
+              <h1>{isLogin ? 'Вход в каталог и личное пространство.' : 'Присоединяйтесь к общей базе знаний.'}</h1>
+              <p className="hero-copy">
+                {isLogin
+                  ? 'Сохраняйте полезные материалы, быстрее возвращайтесь к своим подборкам и отправляйте новые файлы на модерацию.'
+                  : 'Создайте аккаунт, чтобы публиковать материалы, собирать избранное и получать персональные рекомендации по курсу и направлению.'}
+              </p>
+            </div>
 
-        <div className="auth-switch" role="tablist" aria-label="Режим авторизации">
-          <button
-            className={isLogin ? 'is-active' : ''}
-            type="button"
-            onClick={() => switchMode('login')}
-          >
-            Вход
-          </button>
-          <button
-            className={!isLogin ? 'is-active' : ''}
-            type="button"
-            onClick={() => switchMode('register')}
-          >
-            Регистрация
-          </button>
-        </div>
+            <div className="auth-feature-list">
+              <article className="auth-feature-card">
+                <strong>Каталог</strong>
+                <span>Быстрый поиск по предметам и типам материалов</span>
+              </article>
+              <article className="auth-feature-card">
+                <strong>Профиль</strong>
+                <span>Персонализация по курсу, направлению и группе</span>
+              </article>
+              <article className="auth-feature-card">
+                <strong>Публикация</strong>
+                <span>Отправка материалов на модерацию без лишних шагов</span>
+              </article>
+            </div>
+          </div>
 
-        <div className="auth-form-frame">
+          <div className="auth-aside__media" aria-hidden="true">
+            <img alt="" src={heroImage} />
+          </div>
+        </aside>
+
+        <div className="auth-card">
+          <div className="section-heading section-heading--compact">
+            <p className="caps-label">Аккаунт</p>
+            <h2>{isLogin ? 'Вход в систему' : 'Регистрация'}</h2>
+            <p className="hero-copy">
+              {isLogin
+                ? 'Введите данные, чтобы продолжить работу в SMHUB.'
+                : 'Заполните данные аккаунта и учебный контекст.'}
+            </p>
+          </div>
+
+          <div className="auth-switch" role="tablist" aria-label="Режим авторизации">
+            <button
+              className={isLogin ? 'is-active' : ''}
+              type="button"
+              onClick={() => switchMode('login')}
+            >
+              Вход
+            </button>
+            <button
+              className={!isLogin ? 'is-active' : ''}
+              type="button"
+              onClick={() => switchMode('register')}
+            >
+              Регистрация
+            </button>
+          </div>
+
+          {error ? <p className="form-error">{error}</p> : null}
+
           {isLogin ? (
-            <form className="form-grid auth-form-motion" key="login" onSubmit={handleLoginSubmit}>
-              {isDevelopment && (
+            <form className="form-grid auth-form auth-form--login" onSubmit={handleLoginSubmit}>
+              {isDevelopment ? (
                 <div className="auth-dev-tools">
                   <button
-                    className="button button--secondary auth-dev-tools__button"
+                    className="button button--ghost"
                     type="button"
                     onClick={fillLoginWithDemoData}
                   >
                     Подставить демо-логин
                   </button>
-                  <p className="auth-dev-tools__hint">
-                    В режиме разработки берутся последние демо-данные после регистрации.
-                  </p>
                 </div>
-              )}
+              ) : null}
 
-              <label>
-                Email <span>*</span>
+              <label className="form-field--wide">
+                Email
                 <input
-                  name="email"
                   type="email"
+                  name="email"
                   value={loginForm.email}
                   onChange={handleChange}
+                  placeholder="student@university.ru"
                   required
-                  autoComplete="email"
-                  placeholder="student@example.com"
                 />
               </label>
 
-              <label>
-                Пароль <span>*</span>
+              <label className="form-field--wide">
+                Пароль
                 <input
-                  name="password"
                   type="password"
+                  name="password"
                   value={loginForm.password}
                   onChange={handleChange}
-                  required
-                  autoComplete="current-password"
                   placeholder="Введите пароль"
+                  required
                 />
               </label>
 
-              {error && <p className="form-error">{error}</p>}
-
-              <button className="button button--primary" type="submit" disabled={isSubmitting}>
+              <button className="button button--primary form-button--wide" type="submit">
                 {isSubmitting ? 'Входим...' : 'Войти'}
               </button>
             </form>
           ) : (
-            <form
-              className="form-grid form-grid--two auth-form-motion"
-              key="register"
-              onSubmit={handleRegisterSubmit}
-            >
-              {isDevelopment && (
-                <div className="auth-dev-tools form-field--wide">
+            <form className="form-grid form-grid--two auth-form" onSubmit={handleRegisterSubmit}>
+              {isDevelopment ? (
+                <div className="auth-dev-tools auth-dev-tools--wide">
                   <button
-                    className="button button--secondary auth-dev-tools__button"
+                    className="button button--ghost"
                     type="button"
                     onClick={fillRegisterWithDemoData}
                   >
-                    Заполнить демо-данными
+                    Заполнить демо-форму
                   </button>
-                  <p className="auth-dev-tools__hint">
-                    Генерируются уникальные тестовые email и username, чтобы не упираться в дубликаты.
-                  </p>
                 </div>
-              )}
+              ) : null}
 
-              <label>
-                Email <span>*</span>
+              <label className="form-field--wide">
+                Email
                 <input
-                  name="email"
                   type="email"
+                  name="email"
                   value={registerForm.email}
                   onChange={handleChange}
+                  placeholder="student@university.ru"
                   required
-                  placeholder="student@example.com"
                 />
               </label>
 
-              <label>
-                Username <span>*</span>
+              <label className="form-field--wide">
+                Имя пользователя
                 <input
+                  type="text"
                   name="username"
                   value={registerForm.username}
                   onChange={handleChange}
+                  placeholder="Например, ivan_21"
                   required
-                  minLength={3}
-                  placeholder="ivanov"
                 />
               </label>
 
               <label>
-                Пароль <span>*</span>
+                Фамилия
                 <input
-                  name="password"
-                  type="password"
-                  value={registerForm.password}
-                  onChange={handleChange}
-                  required
-                  minLength={6}
-                  placeholder="Минимум 6 символов"
-                />
-              </label>
-
-              <label>
-                Фамилия <span>*</span>
-                <input
+                  type="text"
                   name="last_name"
                   value={registerForm.last_name}
                   onChange={handleChange}
                   required
-                  placeholder="Иванов"
                 />
               </label>
 
               <label>
-                Имя <span>*</span>
+                Имя
                 <input
+                  type="text"
                   name="first_name"
                   value={registerForm.first_name}
                   onChange={handleChange}
                   required
-                  placeholder="Иван"
                 />
               </label>
 
-              <label>
+              <label className="form-field--wide">
                 Отчество
                 <input
+                  type="text"
                   name="middle_name"
                   value={registerForm.middle_name}
                   onChange={handleChange}
-                  placeholder="Иванович"
+                />
+              </label>
+
+              <label className="form-field--wide">
+                Пароль
+                <input
+                  type="password"
+                  name="password"
+                  value={registerForm.password}
+                  onChange={handleChange}
+                  placeholder="Минимум 8 символов"
+                  required
                 />
               </label>
 
               <label>
                 Курс
                 <input
+                  type="text"
                   name="course_value"
-                  list="course-options"
                   value={registerForm.course_value}
                   onChange={handleChange}
-                  placeholder="1 или 1 курс"
+                  list="course-options"
+                  placeholder="Например: 2 курс"
                 />
                 <datalist id="course-options">
                   {courses.map((course) => (
@@ -462,11 +476,12 @@ const LoginPage = ({ defaultMode = 'login' }) => {
               <label>
                 Направление
                 <input
+                  type="text"
                   name="program_value"
-                  list="program-options"
                   value={registerForm.program_value}
                   onChange={handleChange}
-                  placeholder="09.03.03 - Прикладная информатика"
+                  list="program-options"
+                  placeholder="Код - название"
                 />
                 <datalist id="program-options">
                   {programs.map((program) => (
@@ -475,20 +490,19 @@ const LoginPage = ({ defaultMode = 'login' }) => {
                 </datalist>
               </label>
 
-              <label>
+              <label className="form-field--wide">
                 Группа
                 <input
+                  type="text"
                   name="group_name"
                   value={registerForm.group_name}
                   onChange={handleChange}
-                  placeholder="ПИ-21"
+                  placeholder="Например: ИВТ-21-1"
                 />
               </label>
 
-              {error && <p className="form-error form-error--wide">{error}</p>}
-
-              <button className="button button--primary form-button--wide" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Создаем...' : 'Создать аккаунт'}
+              <button className="button button--primary form-button--wide" type="submit">
+                {isSubmitting ? 'Создаём аккаунт...' : 'Создать аккаунт'}
               </button>
             </form>
           )}
