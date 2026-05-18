@@ -58,3 +58,21 @@ export async function updateMaterialComment(commentId, content) {
 export async function deleteMaterialComment(commentId) {
   await apiClient.delete(`/comments/${commentId}`);
 }
+
+export async function addMaterialToFavorites(materialId) {
+  const response = await apiClient.post(`/materials/${materialId}/favorite`);
+
+  return response.data;
+}
+
+export async function removeMaterialFromFavorites(materialId) {
+  const response = await apiClient.delete(`/materials/${materialId}/favorite`);
+
+  return response.data;
+}
+
+export async function getMyFavorites() {
+  const response = await apiClient.get('/users/me/favorites');
+
+  return response.data;
+}

@@ -72,6 +72,7 @@ class MaterialSummaryResponse(BaseModel):
     published_at: datetime | None
     created_at: datetime
     updated_at: datetime | None
+    is_favorite: bool = False
     author: MaterialAuthorResponse
     subject: SubjectBriefResponse
     material_type: MaterialTypeBriefResponse
@@ -101,3 +102,16 @@ class CommentCreateRequest(BaseModel):
 
 class CommentUpdateRequest(BaseModel):
     content: str = Field(min_length=1, max_length=5000)
+
+
+class FavoriteToggleResponse(BaseModel):
+    material_id: int
+    is_favorite: bool
+    favorites_count: int
+
+
+class MaterialListResponse(BaseModel):
+    items: list[MaterialSummaryResponse]
+    total: int
+    page: int
+    page_size: int
