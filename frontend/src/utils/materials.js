@@ -64,3 +64,11 @@ export function toMaterialCardView(material) {
     isFavorite: material.is_favorite,
   };
 }
+
+export function formatMaterialDate(value) {
+  return formatDate(value);
+}
+
+export function formatMaterialFileSize(bytes) {
+  return formatFileSize(bytes);
+}

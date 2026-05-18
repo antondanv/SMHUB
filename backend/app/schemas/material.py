@@ -133,3 +133,12 @@ class HomepageResponse(BaseModel):
     related_materials: list[MaterialSummaryResponse]
     popular_in_course: list[MaterialSummaryResponse]
     rules: list[str]
+
+
+class ModerationQueueResponse(BaseModel):
+    items: list[MaterialSummaryResponse]
+    total: int
+
+
+class ModerationDecisionRequest(BaseModel):
+    status: str
