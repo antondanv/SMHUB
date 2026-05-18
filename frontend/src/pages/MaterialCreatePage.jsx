@@ -59,8 +59,8 @@ const MaterialCreatePage = () => {
 
   if (isAuthLoading) {
     return (
-      <section className="material-create-page">
-        <div className="material-create-card">
+      <section className="page-shell">
+        <div className="surface-card surface-card--single">
           <p className="profile-muted">Проверяем авторизацию...</p>
         </div>
       </section>
@@ -121,131 +121,152 @@ const MaterialCreatePage = () => {
   }
 
   return (
-    <section className="material-create-page">
-      <div className="material-create-card">
-        <div className="profile-header">
-          <p className="eyebrow">Новый материал</p>
-          <h1>Отправка на модерацию</h1>
-          <p className="form-intro">
-            Загрузите файл, укажите учебный контекст и отправьте материал в общий каталог.
+    <section className="page-shell">
+      <div className="form-layout form-layout--upload">
+        <aside className="surface-card surface-card--sidebar surface-card--upload-aside">
+          <div className="section-heading section-heading--compact">
+            <p className="caps-label">Новый материал</p>
+            <h1>Отправка на модерацию</h1>
+          </div>
+
+          <p className="body-copy">
+            Новый интерфейс делает длинную форму спокойнее: слева короткая памятка, справа
+            основная форма отправки.
           </p>
+
+          <div className="metric-stack metric-stack--profile">
+            <div className="metric-stack__item">
+              <strong>PDF / DOCX / PPTX</strong>
+              <span>Поддерживаемые форматы</span>
+            </div>
+            <div className="metric-stack__item">
+              <strong>20 МБ</strong>
+              <span>Максимальный размер файла</span>
+            </div>
+            <div className="metric-stack__item">
+              <strong>1-2 дня</strong>
+              <span>Средний срок модерации</span>
+            </div>
+          </div>
+        </aside>
+
+        <div className="surface-card surface-card--form surface-card--upload-form">
+          <div className="section-heading">
+            <p className="caps-label">Форма загрузки</p>
+            <h2>Подготовьте материал к публикации</h2>
+            <p className="hero-copy">
+              Загрузите файл, укажите предмет и тип материала, а затем отправьте его в общий
+              каталог SMHUB.
+            </p>
+          </div>
+
+          {referenceDataError && (
+            <p className="form-error">
+              Не удалось загрузить справочники. Попробуйте обновить страницу позже.
+            </p>
+          )}
+
+          {error && <p className="form-error">{error}</p>}
+          {success && <p className="form-success">{success}</p>}
+
+          <form onSubmit={handleSubmit} className="form-grid form-grid--two material-create-form">
+            <label className="form-field--wide">
+              Название <span>*</span>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="Например: Конспект по базам данных"
+                maxLength={255}
+                required
+              />
+            </label>
+
+            <label className="form-field--wide">
+              Описание
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={5}
+                placeholder="Кратко опишите, чем полезен материал."
+              />
+            </label>
+
+            <label>
+              Предмет <span>*</span>
+              <SubjectSelect
+                name="subject_id"
+                value={formData.subject_id}
+                onChange={handleChange}
+                subjects={subjects}
+                isLoading={isReferenceDataLoading}
+                hasError={Boolean(referenceDataError)}
+                required
+              />
+            </label>
+
+            <label>
+              Тип материала <span>*</span>
+              <MaterialTypeSelect
+                name="material_type_id"
+                value={formData.material_type_id}
+                onChange={handleChange}
+                materialTypes={materialTypes}
+                isLoading={isReferenceDataLoading}
+                hasError={Boolean(referenceDataError)}
+                required
+              />
+            </label>
+
+            <label>
+              Курс <span>*</span>
+              <CourseSelect
+                name="course_id"
+                value={selectedCourseId}
+                onChange={handleChange}
+                courses={courses}
+                isLoading={isReferenceDataLoading}
+                hasError={Boolean(referenceDataError)}
+                required
+              />
+            </label>
+
+            <label>
+              Направление <span>*</span>
+              <ProgramSelect
+                name="program_id"
+                value={selectedProgramId}
+                onChange={handleChange}
+                programs={programs}
+                isLoading={isReferenceDataLoading}
+                hasError={Boolean(referenceDataError)}
+                required
+              />
+            </label>
+
+            <label className="form-field--wide upload-field">
+              Файл <span>*</span>
+              <input
+                type="file"
+                name="file"
+                accept=".pdf,.doc,.docx,.ppt,.pptx"
+                onChange={handleFileChange}
+                required
+              />
+              <small>Поддерживаются PDF, DOC, DOCX, PPT и PPTX размером до 20 МБ.</small>
+            </label>
+
+            <button
+              type="submit"
+              className="button button--primary form-button--wide"
+              disabled={isSubmitting || isReferenceDataLoading || Boolean(referenceDataError)}
+            >
+              {isSubmitting ? 'Отправляем...' : 'Отправить материал'}
+            </button>
+          </form>
         </div>
-
-        {referenceDataError && (
-          <p className="form-error">
-            Не удалось загрузить справочники. Попробуйте обновить страницу позже.
-          </p>
-        )}
-
-        {error && (
-          <p className="form-error">
-            {error}
-          </p>
-        )}
-
-        {success && (
-          <p className="form-success">
-            {success}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="form-grid form-grid--two material-create-form">
-          <label className="form-field--wide">
-            Название <span>*</span>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="Например: Конспект по базам данных"
-              maxLength={255}
-              required
-            />
-          </label>
-
-          <label className="form-field--wide">
-            Описание
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={5}
-              placeholder="Кратко опишите, чем полезен материал."
-            />
-          </label>
-
-          <label>
-            Предмет <span>*</span>
-            <SubjectSelect
-              name="subject_id"
-              value={formData.subject_id}
-              onChange={handleChange}
-              subjects={subjects}
-              isLoading={isReferenceDataLoading}
-              hasError={Boolean(referenceDataError)}
-              required
-            />
-          </label>
-
-          <label>
-            Тип материала <span>*</span>
-            <MaterialTypeSelect
-              name="material_type_id"
-              value={formData.material_type_id}
-              onChange={handleChange}
-              materialTypes={materialTypes}
-              isLoading={isReferenceDataLoading}
-              hasError={Boolean(referenceDataError)}
-              required
-            />
-          </label>
-
-          <label>
-            Курс <span>*</span>
-            <CourseSelect
-              name="course_id"
-              value={selectedCourseId}
-              onChange={handleChange}
-              courses={courses}
-              isLoading={isReferenceDataLoading}
-              hasError={Boolean(referenceDataError)}
-              required
-            />
-          </label>
-
-          <label>
-            Направление <span>*</span>
-            <ProgramSelect
-              name="program_id"
-              value={selectedProgramId}
-              onChange={handleChange}
-              programs={programs}
-              isLoading={isReferenceDataLoading}
-              hasError={Boolean(referenceDataError)}
-              required
-            />
-          </label>
-
-          <label className="form-field--wide">
-            Файл <span>*</span>
-            <input
-              type="file"
-              name="file"
-              accept=".pdf,.doc,.docx,.ppt,.pptx"
-              onChange={handleFileChange}
-              required
-            />
-            <small>Поддерживаются PDF, DOC, DOCX, PPT и PPTX размером до 20 МБ.</small>
-          </label>
-
-          <button
-            type="submit"
-            className="button button--primary form-button--wide"
-            disabled={isSubmitting || isReferenceDataLoading || Boolean(referenceDataError)}
-          >
-            {isSubmitting ? 'Отправляем...' : 'Отправить материал'}
-          </button>
-        </form>
       </div>
     </section>
   );
