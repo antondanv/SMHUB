@@ -120,6 +120,8 @@ def serialize_material(
     material: Material,
     *,
     is_favorite: bool = False,
+    is_liked: bool = False,
+    user_rating: int | None = None,
 ) -> MaterialSummaryResponse:
     return MaterialSummaryResponse(
         id=material.id,
@@ -139,6 +141,10 @@ def serialize_material(
         created_at=material.created_at,
         updated_at=material.updated_at,
         is_favorite=is_favorite,
+        is_liked=is_liked,
+        avg_rating=material.avg_rating,
+        ratings_count=material.ratings_count,
+        user_rating=user_rating,
         author=MaterialAuthorResponse(
             id=material.author.id,
             username=material.author.username,

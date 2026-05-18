@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, String, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, SmallInteger, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -42,6 +42,8 @@ class Material(Base):
     likes_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     comments_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     favorites_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    avg_rating: Mapped[float] = mapped_column(Float, nullable=True)
+    ratings_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -65,3 +67,4 @@ class Material(Base):
     comments: Mapped[List["Comment"]] = relationship(back_populates="material")
     likes: Mapped[List["Like"]] = relationship(back_populates="material")
     favorites: Mapped[List["Favorite"]] = relationship(back_populates="material")
+    ratings: Mapped[List["Rating"]] = relationship(back_populates="material")
