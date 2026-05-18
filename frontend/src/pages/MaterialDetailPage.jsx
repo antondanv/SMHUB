@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
+  addMaterialToFavorites,
   createMaterialComment,
   deleteMaterialComment,
   downloadMaterial,
   getMaterialById,
   getMaterialComments,
+  removeMaterialFromFavorites,
   updateMaterialComment,
 } from '../api/materialsApi';
 import StatusBadge from '../components/StatusBadge';
@@ -74,6 +76,7 @@ const MaterialDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloadPending, setIsDownloadPending] = useState(false);
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
+  const [isFavoritePending, setIsFavoritePending] = useState(false);
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState(null);
   const [actionMessage, setActionMessage] = useState('');
@@ -153,6 +156,41 @@ const MaterialDetailPage = () => {
       );
     } finally {
       setIsDownloadPending(false);
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (!material) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setActionMessage('');
+    setIsFavoritePending(true);
+
+    try {
+      const response = material.is_favorite
+        ? await removeMaterialFromFavorites(material.id)
+        : await addMaterialToFavorites(material.id);
+
+      setMaterial((currentMaterial) => ({
+        ...currentMaterial,
+        is_favorite: response.is_favorite,
+        favorites_count: response.favorites_count,
+      }));
+    } catch (requestError) {
+      setActionMessage(
+        getErrorMessage(
+          requestError,
+          'Не удалось обновить избранное. Попробуйте позже.'
+        )
+      );
+    } finally {
+      setIsFavoritePending(false);
     }
   }
 
@@ -306,8 +344,13 @@ const MaterialDetailPage = () => {
                 >
                   {isDownloadPending ? 'Скачиваем...' : 'Скачать'}
                 </button>
-                <button className="button button--secondary" type="button" disabled>
-                  Избранное позже
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  disabled={isFavoritePending}
+                >
+                  {material.is_favorite ? 'Убрать из избранного' : 'Сохранить'}
                 </button>
               </div>
             </div>

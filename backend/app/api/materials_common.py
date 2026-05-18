@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from fastapi import HTTPException, status
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.enums import MaterialStatus as MaterialStatusEnum
 from app.models.enums import UserRole
+from app.models.favorite import Favorite
 from app.models.material import Material
 from app.models.material_status import MaterialStatus
 from app.models.user import User
@@ -95,7 +98,29 @@ def get_status_or_500(db: Session, status_name: MaterialStatusEnum) -> MaterialS
     return material_status
 
 
-def serialize_material(material: Material) -> MaterialSummaryResponse:
+def fetch_favorite_ids(
+    db: Session,
+    user_id: int,
+    material_ids: Sequence[int],
+) -> set[int]:
+    if not material_ids:
+        return set()
+
+    favorite_rows = db.scalars(
+        select(Favorite.material_id).where(
+            Favorite.user_id == user_id,
+            Favorite.material_id.in_(material_ids),
+        )
+    ).all()
+
+    return set(favorite_rows)
+
+
+def serialize_material(
+    material: Material,
+    *,
+    is_favorite: bool = False,
+) -> MaterialSummaryResponse:
     return MaterialSummaryResponse(
         id=material.id,
         title=material.title,
@@ -113,6 +138,7 @@ def serialize_material(material: Material) -> MaterialSummaryResponse:
         published_at=material.published_at,
         created_at=material.created_at,
         updated_at=material.updated_at,
+        is_favorite=is_favorite,
         author=MaterialAuthorResponse(
             id=material.author.id,
             username=material.author.username,
