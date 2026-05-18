@@ -115,3 +115,21 @@ class MaterialListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class HomepageSubjectResponse(BaseModel):
+    id: int
+    name: str
+    materials_count: int
+
+
+class HomepageResponse(BaseModel):
+    audience: str
+    latest: list[MaterialSummaryResponse]
+    popular: list[MaterialSummaryResponse]
+    subjects: list[HomepageSubjectResponse]
+    course_materials: list[MaterialSummaryResponse]
+    program_materials: list[MaterialSummaryResponse]
+    related_materials: list[MaterialSummaryResponse]
+    popular_in_course: list[MaterialSummaryResponse]
+    rules: list[str]
