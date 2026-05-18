@@ -1,95 +1,48 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import CourseSelect from '../components/selectors/CourseSelect';
+import ProgramSelect from '../components/selectors/ProgramSelect';
 import { useAuth } from '../context/useAuth';
-
-function normalizeValue(value) {
-  return value.trim().toLowerCase();
-}
-
-function getCourseOptionLabel(course) {
-  return `${course.number} курс`;
-}
-
-function resolveCourseId(value, courses) {
-  if (!value.trim()) {
-    return null;
-  }
-
-  const normalized = normalizeValue(value);
-
-  const course = courses.find((item) => {
-    const number = String(item.number);
-    const optionLabel = normalizeValue(getCourseOptionLabel(item));
-
-    return normalized === number || normalized === optionLabel;
-  });
-
-  return course ? course.id : undefined;
-}
-
-function getProgramOptionLabel(program) {
-  return `${program.code} - ${program.name}`;
-}
-
-function resolveProgramId(value, programs) {
-  if (!value.trim()) {
-    return null;
-  }
-
-  const normalized = normalizeValue(value);
-
-  const program = programs.find((item) => {
-    const optionLabel = normalizeValue(getProgramOptionLabel(item));
-
-    return normalized === optionLabel;
-  });
-
-  return program ? program.id : undefined;
-}
+import { useReferenceData } from '../context/useReferenceData';
 
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
-  const [courses, setCourses] = useState([]);
-  const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const { setUser: setAuthUser } = useAuth();
+  const {
+    courses,
+    programs,
+    isLoading: isReferenceDataLoading,
+    error: referenceDataError,
+  } = useReferenceData();
 
   const [formData, setFormData] = useState({
     username: '',
     first_name: '',
     last_name: '',
     middle_name: '',
-    course_value: '',
-    program_value: '',
+    course_id: '',
+    program_id: '',
     group_name: ''
   });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [userRes, coursesRes, programsRes] = await Promise.all([
-        apiClient.get('/users/me'),
-        apiClient.get('/courses'),
-        apiClient.get('/programs')
-        ]);
+        const userRes = await apiClient.get('/users/me');
 
         setUser(userRes.data);
-        setCourses(coursesRes.data);
-        setPrograms(programsRes.data);
-
-        const selectedCourse = coursesRes.data.find((course) => course.id === userRes.data.course_id);
-        const selectedProgram = programsRes.data.find((program) => program.id === userRes.data.program_id);
 
         setFormData({
           username: userRes.data.username || '',
           first_name: userRes.data.first_name || '',
           last_name: userRes.data.last_name || '',
           middle_name: userRes.data.middle_name || '',
-          course_value: selectedCourse ? getCourseOptionLabel(selectedCourse) : '',
-          program_value: selectedProgram ? getProgramOptionLabel(selectedProgram) : '',
+          course_id: userRes.data.course_id ? String(userRes.data.course_id) : '',
+          program_id: userRes.data.program_id ? String(userRes.data.program_id) : '',
           group_name: userRes.data.group_name || ''
         });
       } catch (err) {
@@ -117,25 +70,13 @@ const ProfilePage = () => {
     setError(null);
 
     try {
-      const courseId = resolveCourseId(formData.course_value, courses);
-      if (courseId === undefined) {
-        setError('Курс укажите как номер или выберите из подсказок.');
-        return;
-      }
-
-      const programId = resolveProgramId(formData.program_value, programs);
-      if (programId === undefined) {
-        setError('Направление укажите в формате "код - название" или выберите из подсказок.');
-        return;
-      }
-
       const submissionData = {
         username: formData.username,
         first_name: formData.first_name,
         last_name: formData.last_name,
         middle_name: formData.middle_name || null,
-        course_id: courseId,
-        program_id: programId,
+        course_id: formData.course_id ? Number(formData.course_id) : null,
+        program_id: formData.program_id ? Number(formData.program_id) : null,
         group_name: formData.group_name || null,
       };
 
@@ -195,6 +136,12 @@ const ProfilePage = () => {
           </p>
         )}
 
+        {referenceDataError && (
+          <p className="form-error">
+            Не удалось загрузить справочники. Селекторы могут быть временно недоступны.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="form-grid form-grid--two profile-form">
           <label className="form-field--wide">
             Email
@@ -251,36 +198,26 @@ const ProfilePage = () => {
 
           <label>
             Курс
-            <input
-              type="text"
-              name="course_value"
-              list="profile-course-options"
-              value={formData.course_value}
+            <CourseSelect
+              name="course_id"
+              value={formData.course_id}
               onChange={handleChange}
-              placeholder="1 или 1 курс"
+              courses={courses}
+              isLoading={isReferenceDataLoading}
+              hasError={Boolean(referenceDataError)}
             />
-            <datalist id="profile-course-options">
-              {courses.map((course) => (
-                <option key={course.id} value={getCourseOptionLabel(course)} />
-              ))}
-            </datalist>
           </label>
 
           <label>
             Направление
-            <input
-              type="text"
-              name="program_value"
-              list="profile-program-options"
-              value={formData.program_value}
+            <ProgramSelect
+              name="program_id"
+              value={formData.program_id}
               onChange={handleChange}
-              placeholder="09.03.03 - Прикладная информатика"
+              programs={programs}
+              isLoading={isReferenceDataLoading}
+              hasError={Boolean(referenceDataError)}
             />
-            <datalist id="profile-program-options">
-              {programs.map((program) => (
-                <option key={program.id} value={getProgramOptionLabel(program)} />
-              ))}
-            </datalist>
           </label>
 
           <label className="form-field--wide">
