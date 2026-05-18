@@ -1828,6 +1828,11 @@ small {
   padding: var(--space-sm) var(--space-md);
   display: grid;
   gap: var(--space-xs);
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-lowest);
   transition: border-color 160ms ease, background 160ms ease;
 }
 
