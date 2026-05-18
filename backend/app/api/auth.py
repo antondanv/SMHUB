@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import create_access_token, decode_access_token
 from app.db.database import get_db
@@ -13,6 +13,7 @@ from app.services.auth_service import authenticate_user, create_user
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
 def get_current_user(
@@ -36,7 +37,7 @@ def get_current_user(
         )
         
     user = db.scalar(
-        select(User).where(User.id == int(user_id)),
+        select(User).options(joinedload(User.role)).where(User.id == int(user_id)),
     )
     
     if user is None:
@@ -51,6 +52,33 @@ def get_current_user(
             detail="User is inactive",
         )
     
+    return user
+
+
+def get_optional_user(
+    token: str | None = Depends(optional_oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if not token:
+        return None
+
+    payload = decode_access_token(token)
+
+    if payload is None:
+        return None
+
+    user_id = payload.get("sub")
+
+    if user_id is None:
+        return None
+
+    user = db.scalar(
+        select(User).options(joinedload(User.role)).where(User.id == int(user_id)),
+    )
+
+    if user is None or not user.is_active:
+        return None
+
     return user
 
 

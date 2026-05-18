@@ -3,15 +3,70 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
+from app.api.materials_common import (
+    assert_material_is_visible,
+    base_material_query,
+    fetch_favorite_ids,
+    serialize_material,
+)
 from app.db.database import get_db
 from app.models.course import Course
+from app.models.favorite import Favorite
+from app.models.material import Material
 from app.models.program import Program
 from app.models.user import User
+from app.schemas.material import MaterialListResponse
 from app.schemas.user import UserProfileResponse, UserProfileUpdate
 from app.services.auth_service import get_user_by_username
 
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+@router.get("/me/favorites", response_model=MaterialListResponse)
+def get_my_favorites(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MaterialListResponse:
+    favorites = db.scalars(
+        select(Favorite)
+        .where(Favorite.user_id == current_user.id)
+        .order_by(Favorite.created_at.desc())
+    ).all()
+
+    material_ids = [favorite.material_id for favorite in favorites]
+    favorite_ids = fetch_favorite_ids(db, current_user.id, material_ids)
+    materials = {
+        material.id: material
+        for material in db.scalars(
+            base_material_query().where(Material.id.in_(material_ids))
+        ).unique().all()
+    }
+
+    ordered_items = []
+
+    for favorite in favorites:
+        material = materials.get(favorite.material_id)
+
+        if material is None:
+            continue
+
+        try:
+            assert_material_is_visible(material, current_user)
+        except HTTPException:
+            continue
+
+        ordered_items.append(material)
+
+    return MaterialListResponse(
+        items=[
+            serialize_material(material, is_favorite=material.id in favorite_ids)
+            for material in ordered_items
+        ],
+        total=len(ordered_items),
+        page=1,
+        page_size=len(ordered_items),
+    )
 
 
 @router.get("/me", response_model=UserProfileResponse)
