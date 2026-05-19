@@ -5,6 +5,16 @@ export async function getMaterials(params = {}) {
   return response.data;
 }
 
+export async function likeMaterial(id) {
+  const response = await apiClient.post(`/materials/${id}/like`);
+  return response.data;
+}
+
+export async function unlikeMaterial(id) {
+  const response = await apiClient.delete(`/materials/${id}/like`);
+  return response.data;
+}
+
 export async function getMaterialById(id) {
   const response = await apiClient.get(`/materials/${id}`);
   return response.data;

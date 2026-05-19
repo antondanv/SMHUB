@@ -3,15 +3,18 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
+from app.core.security import decode_access_token
 from app.core.config import BASE_DIR
 from app.db.database import get_db
 from app.models.course import Course
 from app.models.enums import MaterialStatus as MaterialStatusEnum, UserRole
+from app.models.like import Like
 from app.models.material import Material
 from app.models.material_status import MaterialStatus
 from app.models.material_type import MaterialType
@@ -23,6 +26,22 @@ from app.schemas.material import MaterialCreateResponse, MaterialUpdateRequest
 
 
 router = APIRouter(prefix="/materials", tags=["materials"])
+_optional_bearer = HTTPBearer(auto_error=False)
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_bearer),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    if credentials is None:
+        return None
+    payload = decode_access_token(credentials.credentials)
+    if payload is None:
+        return None
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+    return db.scalar(select(User).where(User.id == int(user_id)))
 
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 UPLOADS_DIR = BASE_DIR / "uploads" / "materials"
@@ -54,7 +73,7 @@ def build_material_response(material: Material) -> MaterialCreateResponse:
     )
 
 
-def build_material_detail(material: Material) -> dict:
+def build_material_detail(material: Material, is_liked: bool = False) -> dict:
     return {
         "id": material.id,
         "title": material.title,
@@ -81,6 +100,7 @@ def build_material_detail(material: Material) -> dict:
         "published_at": material.published_at.isoformat() if material.published_at else None,
         "created_at": material.created_at.isoformat() if material.created_at else None,
         "updated_at": material.updated_at.isoformat() if material.updated_at else None,
+        "is_liked": is_liked,
     }
 
 
@@ -204,12 +224,18 @@ def get_materials(
 @router.get("/{material_id}")
 def get_material(
     material_id: int,
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     material = db.scalar(select(Material).where(Material.id == material_id))
     if material is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
-    return build_material_detail(material)
+    is_liked = False
+    if current_user:
+        is_liked = db.scalar(
+            select(Like).where(Like.material_id == material_id, Like.user_id == current_user.id)
+        ) is not None
+    return build_material_detail(material, is_liked=is_liked)
 
 
 @router.patch("/{material_id}")
@@ -282,6 +308,62 @@ def delete_material(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete material") from exc
 
     file_path.unlink(missing_ok=True)
+
+
+@router.post("/{material_id}/like")
+def like_material(
+    material_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    material = db.scalar(select(Material).where(Material.id == material_id))
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+
+    already_liked = db.scalar(
+        select(Like).where(Like.material_id == material_id, Like.user_id == current_user.id)
+    )
+    if already_liked:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already liked")
+
+    db.add(Like(user_id=current_user.id, material_id=material_id))
+    material.likes_count += 1
+
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to like") from exc
+
+    return {"likes_count": material.likes_count, "is_liked": True}
+
+
+@router.delete("/{material_id}/like")
+def unlike_material(
+    material_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    material = db.scalar(select(Material).where(Material.id == material_id))
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+
+    like = db.scalar(
+        select(Like).where(Like.material_id == material_id, Like.user_id == current_user.id)
+    )
+    if like is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not liked")
+
+    db.delete(like)
+    material.likes_count = max(0, material.likes_count - 1)
+
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to unlike") from exc
+
+    return {"likes_count": material.likes_count, "is_liked": False}
 
 
 @router.post("", response_model=MaterialCreateResponse, status_code=status.HTTP_201_CREATED)
