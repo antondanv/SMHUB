@@ -51,3 +51,4 @@ class User(Base):
     comments: Mapped[List["Comment"]] = relationship(back_populates="user")
     likes: Mapped[List["Like"]] = relationship(back_populates="user")
     favorites: Mapped[List["Favorite"]] = relationship(back_populates="user")
+    ratings: Mapped[List["Rating"]] = relationship(back_populates="user")

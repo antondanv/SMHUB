@@ -5,6 +5,16 @@ export async function getMaterials(params = {}) {
   return response.data;
 }
 
+export async function rateMaterial(id, value) {
+  const response = await apiClient.post(`/materials/${id}/rating`, null, { params: { value } });
+  return response.data;
+}
+
+export async function updateRating(id, value) {
+  const response = await apiClient.patch(`/materials/${id}/rating`, null, { params: { value } });
+  return response.data;
+}
+
 export async function likeMaterial(id) {
   const response = await apiClient.post(`/materials/${id}/like`);
   return response.data;
