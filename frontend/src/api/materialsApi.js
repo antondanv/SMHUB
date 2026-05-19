@@ -5,6 +5,20 @@ export async function getMaterials(params = {}) {
   return response.data;
 }
 
+export async function getMaterialById(id) {
+  const response = await apiClient.get(`/materials/${id}`);
+  return response.data;
+}
+
+export async function updateMaterial(id, data) {
+  const response = await apiClient.patch(`/materials/${id}`, data);
+  return response.data;
+}
+
+export async function deleteMaterial(id) {
+  await apiClient.delete(`/materials/${id}`);
+}
+
 export async function createMaterial(materialData) {
   const formData = new FormData();
 

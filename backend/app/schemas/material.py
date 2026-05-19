@@ -1,6 +1,16 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
+
+
+class MaterialUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    subject_id: Optional[int] = None
+    material_type_id: Optional[int] = None
+    course_id: Optional[int] = None
+    program_id: Optional[int] = None
 
 
 class MaterialCreateResponse(BaseModel):
