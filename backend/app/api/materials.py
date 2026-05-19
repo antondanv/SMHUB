@@ -11,7 +11,7 @@ from app.api.auth import get_current_user
 from app.core.config import BASE_DIR
 from app.db.database import get_db
 from app.models.course import Course
-from app.models.enums import MaterialStatus as MaterialStatusEnum
+from app.models.enums import MaterialStatus as MaterialStatusEnum, UserRole
 from app.models.material import Material
 from app.models.material_status import MaterialStatus
 from app.models.material_type import MaterialType
@@ -19,7 +19,7 @@ from app.models.mime_type import MimeType
 from app.models.program import Program
 from app.models.subject import Subject
 from app.models.user import User
-from app.schemas.material import MaterialCreateResponse
+from app.schemas.material import MaterialCreateResponse, MaterialUpdateRequest
 
 
 router = APIRouter(prefix="/materials", tags=["materials"])
@@ -52,6 +52,43 @@ def build_material_response(material: Material) -> MaterialCreateResponse:
         created_at=material.created_at,
         updated_at=material.updated_at,
     )
+
+
+def build_material_detail(material: Material) -> dict:
+    return {
+        "id": material.id,
+        "title": material.title,
+        "description": material.description,
+        "author_id": material.author_id,
+        "author": {"id": material.author.id, "full_name": material.author.full_name} if material.author else None,
+        "subject_id": material.subject_id,
+        "subject": {"id": material.subject.id, "name": material.subject.name} if material.subject else None,
+        "material_type_id": material.material_type_id,
+        "material_type": {"id": material.material_type.id, "name": material.material_type.name} if material.material_type else None,
+        "course_id": material.course_id,
+        "course": {"id": material.course.id, "name": material.course.name} if material.course else None,
+        "program_id": material.program_id,
+        "program": {"id": material.program.id, "name": material.program.name} if material.program else None,
+        "status": material.status.name,
+        "mime_type": material.mime_type.name,
+        "file_name": material.file_name,
+        "file_size": material.file_size,
+        "views_count": material.views_count,
+        "downloads_count": material.downloads_count,
+        "likes_count": material.likes_count,
+        "comments_count": material.comments_count,
+        "favorites_count": material.favorites_count,
+        "published_at": material.published_at.isoformat() if material.published_at else None,
+        "created_at": material.created_at.isoformat() if material.created_at else None,
+        "updated_at": material.updated_at.isoformat() if material.updated_at else None,
+    }
+
+
+def require_can_edit_material(material: Material, current_user: User) -> None:
+    is_owner = material.author_id == current_user.id
+    is_privileged = current_user.role.name in (UserRole.ADMIN.value, UserRole.MODERATOR.value)
+    if not (is_owner or is_privileged):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
 
 def require_entity(db: Session, model: type, entity_id: int, error_message: str):
@@ -162,6 +199,89 @@ def get_materials(
         "per_page": per_page,
         "total_pages": (total + per_page - 1) // per_page,
     }
+
+
+@router.get("/{material_id}")
+def get_material(
+    material_id: int,
+    db: Session = Depends(get_db),
+):
+    material = db.scalar(select(Material).where(Material.id == material_id))
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+    return build_material_detail(material)
+
+
+@router.patch("/{material_id}")
+def update_material(
+    material_id: int,
+    data: MaterialUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    material = db.scalar(select(Material).where(Material.id == material_id))
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+
+    require_can_edit_material(material, current_user)
+
+    if data.title is not None:
+        normalized = data.title.strip()
+        if not normalized:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title cannot be empty")
+        material.title = normalized
+
+    if data.description is not None:
+        material.description = data.description.strip() or None
+
+    if data.subject_id is not None:
+        require_entity(db, Subject, data.subject_id, "Subject not found")
+        material.subject_id = data.subject_id
+
+    if data.material_type_id is not None:
+        require_entity(db, MaterialType, data.material_type_id, "Material type not found")
+        material.material_type_id = data.material_type_id
+
+    if data.course_id is not None:
+        require_entity(db, Course, data.course_id, "Course not found")
+        material.course_id = data.course_id
+
+    if data.program_id is not None:
+        require_entity(db, Program, data.program_id, "Program not found")
+        material.program_id = data.program_id
+
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update material") from exc
+
+    db.refresh(material)
+    return build_material_detail(material)
+
+
+@router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_material(
+    material_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    material = db.scalar(select(Material).where(Material.id == material_id))
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+
+    require_can_edit_material(material, current_user)
+
+    file_path = BASE_DIR / material.file_url
+
+    try:
+        db.delete(material)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete material") from exc
+
+    file_path.unlink(missing_ok=True)
 
 
 @router.post("", response_model=MaterialCreateResponse, status_code=status.HTTP_201_CREATED)
