@@ -15,6 +15,7 @@ from app.db.database import get_db
 from app.models.course import Course
 from app.models.enums import MaterialStatus as MaterialStatusEnum, UserRole
 from app.models.like import Like
+from app.models.rating import Rating
 from app.models.material import Material
 from app.models.material_status import MaterialStatus
 from app.models.material_type import MaterialType
@@ -73,7 +74,7 @@ def build_material_response(material: Material) -> MaterialCreateResponse:
     )
 
 
-def build_material_detail(material: Material, is_liked: bool = False) -> dict:
+def build_material_detail(material: Material, is_liked: bool = False, user_rating: Optional[int] = None) -> dict:
     return {
         "id": material.id,
         "title": material.title,
@@ -101,6 +102,9 @@ def build_material_detail(material: Material, is_liked: bool = False) -> dict:
         "created_at": material.created_at.isoformat() if material.created_at else None,
         "updated_at": material.updated_at.isoformat() if material.updated_at else None,
         "is_liked": is_liked,
+        "avg_rating": material.avg_rating,
+        "ratings_count": material.ratings_count,
+        "user_rating": user_rating,
     }
 
 
@@ -210,6 +214,8 @@ def get_materials(
                 "downloads_count": m.downloads_count,
                 "likes_count": m.likes_count,
                 "comments_count": m.comments_count,
+                "avg_rating": m.avg_rating,
+                "ratings_count": m.ratings_count,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
             }
             for m in materials
@@ -231,11 +237,16 @@ def get_material(
     if material is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
     is_liked = False
+    user_rating = None
     if current_user:
         is_liked = db.scalar(
             select(Like).where(Like.material_id == material_id, Like.user_id == current_user.id)
         ) is not None
-    return build_material_detail(material, is_liked=is_liked)
+        rating_row = db.scalar(
+            select(Rating).where(Rating.material_id == material_id, Rating.user_id == current_user.id)
+        )
+        user_rating = rating_row.value if rating_row else None
+    return build_material_detail(material, is_liked=is_liked, user_rating=user_rating)
 
 
 @router.patch("/{material_id}")
@@ -364,6 +375,73 @@ def unlike_material(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to unlike") from exc
 
     return {"likes_count": material.likes_count, "is_liked": False}
+
+
+def _refresh_material_rating(material: Material, db: Session) -> None:
+    result = db.execute(
+        select(func.avg(Rating.value), func.count(Rating.id)).where(Rating.material_id == material.id)
+    ).fetchone()
+    material.avg_rating = round(float(result[0]), 2) if result[0] else None
+    material.ratings_count = result[1]
+
+
+@router.post("/{material_id}/rating")
+def rate_material(
+    material_id: int,
+    value: int = Query(..., ge=1, le=5),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    material = db.scalar(select(Material).where(Material.id == material_id))
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+
+    existing = db.scalar(
+        select(Rating).where(Rating.material_id == material_id, Rating.user_id == current_user.id)
+    )
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already rated. Use PATCH to update.")
+
+    db.add(Rating(user_id=current_user.id, material_id=material_id, value=value))
+    db.flush()
+    _refresh_material_rating(material, db)
+
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to rate") from exc
+
+    return {"avg_rating": material.avg_rating, "ratings_count": material.ratings_count, "user_rating": value}
+
+
+@router.patch("/{material_id}/rating")
+def update_rating(
+    material_id: int,
+    value: int = Query(..., ge=1, le=5),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    material = db.scalar(select(Material).where(Material.id == material_id))
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+
+    existing = db.scalar(
+        select(Rating).where(Rating.material_id == material_id, Rating.user_id == current_user.id)
+    )
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No rating to update. Use POST first.")
+
+    existing.value = value
+    _refresh_material_rating(material, db)
+
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update rating") from exc
+
+    return {"avg_rating": material.avg_rating, "ratings_count": material.ratings_count, "user_rating": value}
 
 
 @router.post("", response_model=MaterialCreateResponse, status_code=status.HTTP_201_CREATED)

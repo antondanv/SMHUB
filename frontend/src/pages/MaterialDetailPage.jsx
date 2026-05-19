@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { deleteMaterial, getMaterialById } from '../api/materialsApi';
 import LikeButton from '../components/LikeButton';
+import RatingStars from '../components/RatingStars';
 import { useAuth } from '../context/useAuth';
 
 function formatDate(dateString) {
@@ -190,6 +191,15 @@ const MaterialDetailPage = () => {
           <div className="surface-card">
             <div className="section-heading section-heading--compact">
               <h2>Отзывы и обсуждение</h2>
+            </div>
+
+            <div className="rating-summary">
+              <RatingStars
+                materialId={material.id}
+                initialAvg={material.avg_rating}
+                initialCount={material.ratings_count}
+                initialUserRating={material.user_rating}
+              />
             </div>
 
             <div className="comment-compose">
