@@ -1,5 +1,10 @@
 import apiClient from './apiClient';
 
+export async function getMyMaterials(params = {}) {
+  const response = await apiClient.get('/materials/me', { params });
+  return response.data;
+}
+
 export async function getMaterials(params = {}) {
   const response = await apiClient.get('/materials', { params });
   return response.data;

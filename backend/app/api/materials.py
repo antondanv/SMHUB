@@ -227,6 +227,35 @@ def get_materials(
     }
 
 
+@router.get("/me")
+def get_my_materials(
+    status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Material).filter(Material.author_id == current_user.id)
+
+    if status:
+        status_row = db.scalar(select(MaterialStatus).where(MaterialStatus.name == status))
+        if status_row:
+            query = query.filter(Material.status_id == status_row.id)
+
+    query = query.order_by(Material.created_at.desc())
+
+    total = db.query(func.count()).select_from(query.subquery()).scalar()
+    materials = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return {
+        "items": [build_material_detail(m) for m in materials],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
+    }
+
+
 @router.get("/{material_id}")
 def get_material(
     material_id: int,
