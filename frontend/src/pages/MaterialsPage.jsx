@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getMaterials } from '../api/materialsApi';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  addMaterialToFavorites,
+  getMaterials,
+  removeMaterialFromFavorites,
+} from '../api/materialsApi';
 import MaterialCard from '../components/MaterialCard';
+import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
 
 const DEFAULT_FILTERS = {
@@ -42,8 +47,9 @@ function normalizeApiMaterial(m) {
     downloads: m.downloads_count || 0,
     likes: m.likes_count || 0,
     rating: null,
-    isFavorite: false,
-    status: 'published',
+    favoritesCount: m.favorites_count || 0,
+    isFavorite: Boolean(m.is_favorite),
+    status: m.status || 'published',
   };
 }
 
@@ -57,6 +63,8 @@ function getPaginationPages(page, totalPages) {
 }
 
 const MaterialsPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { subjects, materialTypes, courses, programs } = useReferenceData();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -66,6 +74,7 @@ const MaterialsPage = () => {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingMaterialId, setPendingMaterialId] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -123,6 +132,38 @@ const MaterialsPage = () => {
       isActive = false;
     };
   }, [debouncedSearch, filters.subject_id, filters.material_type_id, filters.course_id, filters.program_id, filters.sort, page]);
+
+  async function handleToggleFavorite(material) {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setPendingMaterialId(material.id);
+    setError(null);
+
+    try {
+      const response = material.isFavorite
+        ? await removeMaterialFromFavorites(material.id)
+        : await addMaterialToFavorites(material.id);
+
+      setMaterials((currentMaterials) =>
+        currentMaterials.map((item) =>
+          item.id === material.id
+            ? {
+                ...item,
+                isFavorite: response.is_favorite,
+                favoritesCount: response.favorites_count,
+              }
+            : item
+        )
+      );
+    } catch (requestError) {
+      setError(requestError);
+    } finally {
+      setPendingMaterialId(null);
+    }
+  }
 
   return (
     <section className="page-shell">
@@ -273,7 +314,12 @@ const MaterialsPage = () => {
             <>
               <div className="catalog-grid">
                 {materials.map((material) => (
-                  <MaterialCard key={material.id} material={material} />
+                  <MaterialCard
+                    key={material.id}
+                    material={material}
+                    onToggleFavorite={handleToggleFavorite}
+                    isFavoritePending={pendingMaterialId === material.id}
+                  />
                 ))}
               </div>
 

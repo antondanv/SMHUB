@@ -8,6 +8,7 @@ import {
   downloadMaterial,
   getMaterialById,
   getMaterialComments,
+  getMaterialFileUrl,
   removeMaterialFromFavorites,
   updateMaterialComment,
 } from '../api/materialsApi';
@@ -85,6 +86,7 @@ const MaterialDetailPage = () => {
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState(null);
   const [actionMessage, setActionMessage] = useState('');
+  const [isViewerLoading, setIsViewerLoading] = useState(true);
 
   useEffect(() => {
     let isActive = true;
@@ -94,16 +96,28 @@ const MaterialDetailPage = () => {
       setError('');
       setErrorCode(null);
       setActionMessage('');
+      setComments([]);
 
       try {
-        const [materialResponse, commentsResponse] = await Promise.all([
+        const [materialResult, commentsResult] = await Promise.allSettled([
           getMaterialById(id),
           getMaterialComments(id),
         ]);
 
+        if (materialResult.status !== 'fulfilled') {
+          throw materialResult.reason;
+        }
+
         if (isActive) {
-          setMaterial(materialResponse);
-          setComments(commentsResponse);
+          setMaterial(materialResult.value);
+          setComments(commentsResult.status === 'fulfilled' ? commentsResult.value : []);
+          setIsViewerLoading(true);
+
+          if (commentsResult.status !== 'fulfilled') {
+            setActionMessage(
+              'Материал открыт, но обсуждение временно недоступно. Попробуйте обновить страницу позже.'
+            );
+          }
         }
       } catch (requestError) {
         if (isActive) {
@@ -345,6 +359,7 @@ const MaterialDetailPage = () => {
       user.role_name === 'moderator' ||
       user.role === 'admin' ||
       user.role === 'moderator');
+  const viewerUrl = getMaterialFileUrl(material.id);
 
   return (
     <section className="page-shell">
@@ -431,7 +446,7 @@ const MaterialDetailPage = () => {
             </div>
           )}
 
-          <div className="preview-card">
+          <div className="preview-card" id="material-preview">
             <div className="preview-card__toolbar">
               <div className="preview-card__file">
                 <span>{getFileTypeLabel(material)}</span>
@@ -443,12 +458,33 @@ const MaterialDetailPage = () => {
             </div>
 
             <div className="preview-card__canvas">
-              <div className="preview-page">
-                <div className="preview-line preview-line--title" />
-                <div className="preview-line" />
-                <div className="preview-line" />
-                <div className="preview-line preview-line--short" />
-                <div className="preview-block" />
+              <div className="material-viewer-shell">
+                {isViewerLoading && (
+                  <div className="preview-page preview-page--loading">
+                    <div className="section-heading section-heading--compact">
+                      <h2>Открываем встроенный viewer</h2>
+                    </div>
+                    <p>
+                      Файл загружается прямо в страницу. Если браузер не покажет PDF,
+                      материал всё равно можно скачать кнопкой выше.
+                    </p>
+                    <div className="preview-line preview-line--title" />
+                    <div className="preview-line" />
+                    <div className="preview-line" />
+                    <div className="preview-line preview-line--short" />
+                    <div className="preview-block" />
+                  </div>
+                )}
+                <iframe
+                  src={viewerUrl}
+                  title={material.title}
+                  className="material-viewer"
+                  onLoad={() => setIsViewerLoading(false)}
+                />
+                <p className="profile-muted material-viewer__fallback">
+                  Если встроенный просмотрщик не отображается, используйте кнопку
+                  «Скачать».
+                </p>
               </div>
             </div>
           </div>
