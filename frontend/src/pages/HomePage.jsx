@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getMaterials } from '../api/materialsApi';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  addMaterialToFavorites,
+  getMaterials,
+  removeMaterialFromFavorites,
+} from '../api/materialsApi';
 import MaterialCard from '../components/MaterialCard';
 import heroImage from '../assets/hero.png';
 import { useAuth } from '../context/useAuth';
@@ -35,8 +39,9 @@ function normalizeApiMaterial(m) {
     downloads: m.downloads_count || 0,
     likes: m.likes_count || 0,
     rating: m.avg_rating || null,
-    isFavorite: false,
-    status: 'published',
+    favoritesCount: m.favorites_count || 0,
+    isFavorite: Boolean(m.is_favorite),
+    status: m.status || 'published',
   };
 }
 
@@ -59,16 +64,57 @@ function useMaterialsSection(params) {
     };
   }, []);
 
-  return { items, isLoading };
+  return { items, setItems, isLoading };
 }
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { subjects } = useReferenceData();
-  const { items: latestMaterials, isLoading: latestLoading } = useMaterialsSection({ sort: 'new', per_page: 3 });
-  const { items: popularMaterials, isLoading: popularLoading } = useMaterialsSection({ sort: 'popular', per_page: 3 });
+  const {
+    items: latestMaterials,
+    setItems: setLatestMaterials,
+    isLoading: latestLoading,
+  } = useMaterialsSection({ sort: 'new', per_page: 3 });
+  const {
+    items: popularMaterials,
+    setItems: setPopularMaterials,
+    isLoading: popularLoading,
+  } = useMaterialsSection({ sort: 'popular', per_page: 3 });
+  const [pendingMaterialId, setPendingMaterialId] = useState(null);
 
   const featuredSubjects = subjects.slice(0, 8);
+
+  async function handleToggleFavorite(material) {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setPendingMaterialId(material.id);
+
+    try {
+      const response = material.isFavorite
+        ? await removeMaterialFromFavorites(material.id)
+        : await addMaterialToFavorites(material.id);
+
+      const updateItems = (items) =>
+        items.map((item) =>
+          item.id === material.id
+            ? {
+                ...item,
+                isFavorite: response.is_favorite,
+                favoritesCount: response.favorites_count,
+              }
+            : item
+        );
+
+      setLatestMaterials((items) => updateItems(items));
+      setPopularMaterials((items) => updateItems(items));
+    } finally {
+      setPendingMaterialId(null);
+    }
+  }
 
   return (
     <div className="page-shell home-page">
@@ -194,7 +240,12 @@ const HomePage = () => {
         ) : latestMaterials.length > 0 ? (
           <div className="material-grid">
             {latestMaterials.map((material) => (
-              <MaterialCard key={material.id} material={material} />
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onToggleFavorite={handleToggleFavorite}
+                isFavoritePending={pendingMaterialId === material.id}
+              />
             ))}
           </div>
         ) : (
@@ -218,7 +269,12 @@ const HomePage = () => {
         ) : popularMaterials.length > 0 ? (
           <div className="material-grid">
             {popularMaterials.map((material) => (
-              <MaterialCard key={material.id} material={material} />
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onToggleFavorite={handleToggleFavorite}
+                isFavoritePending={pendingMaterialId === material.id}
+              />
             ))}
           </div>
         ) : (
