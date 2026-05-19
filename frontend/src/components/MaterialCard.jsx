@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import LikeButton from './LikeButton';
 import StatusBadge from './StatusBadge';
 
 function MaterialCard({ material, showStatus = false, actionLabel = 'Открыть' }) {
@@ -43,7 +44,11 @@ function MaterialCard({ material, showStatus = false, actionLabel = 'Откры�
         <div className="metric-row">
           <span>{material.views} просмотров</span>
           <span>{material.downloads} скачиваний</span>
-          <span>{material.rating} ★</span>
+          <LikeButton
+            materialId={material.id}
+            initialCount={material.likes || 0}
+            initialIsLiked={material.isLiked || false}
+          />
         </div>
       </div>
 

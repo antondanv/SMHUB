@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { deleteMaterial, getMaterialById } from '../api/materialsApi';
+import LikeButton from '../components/LikeButton';
 import { useAuth } from '../context/useAuth';
 
 function formatDate(dateString) {
@@ -118,6 +119,11 @@ const MaterialDetailPage = () => {
                 <button className="button button--secondary" type="button">
                   Сохранить
                 </button>
+                <LikeButton
+                  materialId={material.id}
+                  initialCount={material.likes_count}
+                  initialIsLiked={material.is_liked}
+                />
                 {canEdit && (
                   <>
                     <Link
