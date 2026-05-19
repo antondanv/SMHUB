@@ -5,7 +5,6 @@ from threading import Lock
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import inspect
 from sqlalchemy.engine import Engine
 
 from app.core.config import settings
@@ -20,12 +19,6 @@ def _get_alembic_config() -> Config:
     return Config(str(base_dir / "alembic.ini"))
 
 
-def _tables_exist(engine: Engine) -> bool:
-    inspector = inspect(engine)
-    required_tables = ("users", "roles", "courses", "programs")
-    return all(inspector.has_table(table_name) for table_name in required_tables)
-
-
 def ensure_database_ready(engine: Engine) -> None:
     global _is_bootstrapped
 
@@ -36,8 +29,9 @@ def ensure_database_ready(engine: Engine) -> None:
         if _is_bootstrapped:
             return
 
-        if not _tables_exist(engine):
-            command.upgrade(_get_alembic_config(), "head")
+        # Keep local databases aligned with the latest schema, not only with the
+        # very first bootstrap state.
+        command.upgrade(_get_alembic_config(), "head")
 
         from app.db.seed import seed_reference_data
 

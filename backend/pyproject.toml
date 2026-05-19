@@ -18,3 +18,4 @@ dependencies = [
 
 [project.scripts]
 app = "app.main:app"
+import-materials = "app.db.obsidian_materials:seed_obsidian_materials"
