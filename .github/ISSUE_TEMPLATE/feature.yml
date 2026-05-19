@@ -3,7 +3,13 @@ description: Фича или заметный продуктовый кусок 
 title: "F?: "
 labels:
   - enhancement
+projects:
+  - "antondanv/1"
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Пишите задачу нейтрально: без упоминания инструментов, моделей и технических исполнителей.
   - type: textarea
     id: goal
     attributes:
