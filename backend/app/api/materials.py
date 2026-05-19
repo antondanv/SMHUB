@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -37,8 +38,15 @@ from app.models.user import User
 from app.schemas.material import (
     FavoriteToggleResponse,
     MaterialCreateResponse,
+    MaterialPreviewResponse,
+    MaterialPreviewSectionResponse,
     MaterialSummaryResponse,
     MaterialUpdateRequest,
+)
+from app.services.material_preview import (
+    build_preview_from_paragraphs,
+    extract_docx_paragraphs,
+    load_preview_sidecar,
 )
 
 
@@ -157,6 +165,49 @@ def _resolve_user_flags(
     )
     user_rating = rating_row.value if rating_row else None
     return is_favorite, is_liked, user_rating
+
+
+def _build_preview_response(material: Material) -> MaterialPreviewResponse | None:
+    file_path = BASE_DIR / material.file_url
+    preview = load_preview_sidecar(file_path)
+    if preview is None and material.file_name.lower().endswith(".docx"):
+        preview = build_preview_from_paragraphs(
+            extract_docx_paragraphs(file_path),
+            material.title,
+        )
+    if preview is None:
+        return None
+
+    return MaterialPreviewResponse(
+        material_id=material.id,
+        title=preview["title"],
+        summary=preview["summary"],
+        sections=[
+            MaterialPreviewSectionResponse(
+                heading=section["heading"],
+                bullets=section["bullets"],
+            )
+            for section in preview["sections"]
+        ],
+        note=preview["note"],
+    )
+
+
+def _build_content_disposition(file_name: str, disposition_type: str) -> str:
+    suffix = Path(file_name).suffix or ".bin"
+    ascii_stem = Path(file_name).stem.encode("ascii", "ignore").decode("ascii")
+    ascii_stem = "".join(
+        char
+        for char in ascii_stem
+        if char.isalnum() or char in {" ", "_", "-"}
+    )
+    ascii_stem = " ".join(ascii_stem.split()).strip(" .-_")
+    ascii_name = f"{ascii_stem or 'material'}{suffix}"
+    ascii_name = ascii_name.replace("\\", "\\\\").replace('"', '\\"')
+    return (
+        f'{disposition_type}; filename="{ascii_name}"; '
+        f"filename*=UTF-8''{quote(file_name)}"
+    )
 
 
 @router.get("")
@@ -595,9 +646,53 @@ def download_material(
 
     return FileResponse(
         path=file_path,
-        filename=material.file_name,
         media_type=material.mime_type.name,
+        headers={
+            "Content-Disposition": _build_content_disposition(
+                material.file_name,
+                "attachment",
+            )
+        },
     )
+
+
+@router.get("/{material_id}/file")
+def view_material_file(
+    material_id: int,
+    current_user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    material = get_material_or_404(db, material_id)
+    assert_material_is_visible(material, current_user)
+
+    file_path = BASE_DIR / material.file_url
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material file not found",
+        )
+
+    return FileResponse(
+        path=file_path,
+        media_type=material.mime_type.name,
+        headers={
+            "Content-Disposition": _build_content_disposition(
+                material.file_name,
+                "inline",
+            )
+        },
+    )
+
+
+@router.get("/{material_id}/preview", response_model=MaterialPreviewResponse | None)
+def get_material_preview(
+    material_id: int,
+    current_user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> MaterialPreviewResponse | None:
+    material = get_material_or_404(db, material_id)
+    assert_material_is_visible(material, current_user)
+    return _build_preview_response(material)
 
 
 @router.get("/{material_id}", response_model=MaterialSummaryResponse)
@@ -690,6 +785,7 @@ def delete_material(
     require_can_edit_material(material, current_user)
 
     file_path = BASE_DIR / material.file_url
+    preview_sidecar_path = file_path.with_suffix(file_path.suffix + ".preview.json")
 
     try:
         db.delete(material)
@@ -702,3 +798,4 @@ def delete_material(
         ) from exc
 
     file_path.unlink(missing_ok=True)
+    preview_sidecar_path.unlink(missing_ok=True)

@@ -1,5 +1,10 @@
 import apiClient from './apiClient';
 
+function joinApiPath(path) {
+  const baseUrl = (apiClient.defaults.baseURL || '').replace(/\/$/, '');
+  return `${baseUrl}${path}`;
+}
+
 export async function getMyMaterials(params = {}) {
   const response = await apiClient.get('/materials/me', { params });
   return response.data;
@@ -32,6 +37,15 @@ export async function unlikeMaterial(id) {
 
 export async function getMaterialById(id) {
   const response = await apiClient.get(`/materials/${id}`);
+  return response.data;
+}
+
+export function getMaterialFileUrl(id) {
+  return joinApiPath(`/materials/${id}/file`);
+}
+
+export async function getMaterialPreview(id) {
+  const response = await apiClient.get(`/materials/${id}/preview`);
   return response.data;
 }
 
