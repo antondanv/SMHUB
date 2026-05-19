@@ -94,6 +94,19 @@ class MaterialSummaryResponse(BaseModel):
     program: ProgramBriefResponse
 
 
+class MaterialPreviewSectionResponse(BaseModel):
+    heading: str
+    bullets: list[str]
+
+
+class MaterialPreviewResponse(BaseModel):
+    material_id: int
+    title: str
+    summary: str
+    sections: list[MaterialPreviewSectionResponse]
+    note: str
+
+
 class CommentAuthorResponse(BaseModel):
     id: int
     username: str
