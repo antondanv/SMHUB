@@ -88,6 +88,55 @@ Response `200 OK`:
 
 ## Материалы
 
+### `GET /materials`
+
+Каталог материалов с фильтрацией, поиском, сортировкой и пагинацией. Не требует авторизации.
+
+Query-параметры:
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `search` | string | Поиск по названию материала (case-insensitive) |
+| `subject_id` | integer | Фильтр по предмету |
+| `material_type_id` | integer | Фильтр по типу материала |
+| `course_id` | integer | Фильтр по курсу |
+| `program_id` | integer | Фильтр по программе |
+| `sort` | string | Сортировка: `new` (по умолчанию, по дате создания) или `popular` (по скачиваниям и просмотрам) |
+| `page` | integer | Номер страницы (по умолчанию 1) |
+| `per_page` | integer | Количество на странице (по умолчанию 10, макс. 50) |
+
+По умолчанию отдаются только материалы со статусом `published`.
+
+Response `200 OK`:
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "Конспект по базам данных",
+      "description": "Разбор основных тем и примеров.",
+      "subject": { "id": 4, "name": "Базы данных" },
+      "material_type": { "id": 2, "name": "Конспект" },
+      "course": { "id": 2, "name": "2 курс" },
+      "program": { "id": 2, "name": "Прикладная информатика" },
+      "author": { "id": 3, "full_name": "Иванов Иван" },
+      "file_name": "db-notes.pdf",
+      "file_size": 182944,
+      "views_count": 10,
+      "downloads_count": 5,
+      "likes_count": 3,
+      "comments_count": 1,
+      "created_at": "2026-05-18T10:00:00Z"
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "per_page": 10,
+  "total_pages": 5
+}
+```
+
 ### `POST /materials`
 
 Создание нового материала и отправка его на модерацию.
