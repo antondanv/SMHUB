@@ -1,8 +1,9 @@
 from pathlib import Path
+from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -92,6 +93,75 @@ def resolve_mime_type(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="Unsupported file type. Allowed formats: PDF, DOC, DOCX, PPT, PPTX.",
     )
+
+
+@router.get("")
+def get_materials(
+    search: Optional[str] = Query(None, min_length=1),
+    subject_id: Optional[int] = Query(None),
+    material_type_id: Optional[int] = Query(None),
+    course_id: Optional[int] = Query(None),
+    program_id: Optional[int] = Query(None),
+    sort: Optional[str] = Query(None, pattern="^(new|popular)$"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    status_subquery = (
+        db.query(MaterialStatus)
+        .filter(MaterialStatus.name == "published")
+        .subquery()
+    )
+
+    query = db.query(Material).filter(
+        Material.status_id == status_subquery.c.id
+    )
+
+    if search:
+        query = query.filter(Material.title.ilike(f"%{search}%"))
+    if subject_id:
+        query = query.filter(Material.subject_id == subject_id)
+    if material_type_id:
+        query = query.filter(Material.material_type_id == material_type_id)
+    if course_id:
+        query = query.filter(Material.course_id == course_id)
+    if program_id:
+        query = query.filter(Material.program_id == program_id)
+
+    if sort == "popular":
+        query = query.order_by(Material.downloads_count.desc(), Material.views_count.desc())
+    else:
+        query = query.order_by(Material.created_at.desc())
+
+    total = db.query(func.count()).select_from(query.subquery()).scalar()
+    materials = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return {
+        "items": [
+            {
+                "id": m.id,
+                "title": m.title,
+                "description": m.description,
+                "subject": {"id": m.subject.id, "name": m.subject.name} if m.subject else None,
+                "material_type": {"id": m.material_type.id, "name": m.material_type.name} if m.material_type else None,
+                "course": {"id": m.course.id, "name": m.course.name} if m.course else None,
+                "program": {"id": m.program.id, "name": m.program.name} if m.program else None,
+                "author": {"id": m.author.id, "full_name": m.author.full_name} if m.author else None,
+                "file_name": m.file_name,
+                "file_size": m.file_size,
+                "views_count": m.views_count,
+                "downloads_count": m.downloads_count,
+                "likes_count": m.likes_count,
+                "comments_count": m.comments_count,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in materials
+        ],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
+    }
 
 
 @router.post("", response_model=MaterialCreateResponse, status_code=status.HTTP_201_CREATED)
