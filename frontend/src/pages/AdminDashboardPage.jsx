@@ -177,7 +177,7 @@ const AdminDashboardPage = () => {
             <div className="admin-kpi-card admin-kpi-card--warn">
               <span className="admin-kpi-card__value">{summary.materials_pending_count}</span>
               <span className="admin-kpi-card__label">На модерации</span>
-              <Link className="admin-kpi-card__link" to="/moderation">
+              <Link className="admin-kpi-card__link" to="/admin/moderation">
                 Проверить →
               </Link>
             </div>

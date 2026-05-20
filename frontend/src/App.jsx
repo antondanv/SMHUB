@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import AdminLayout from './layouts/AdminLayout';
 import MainLayout from './layouts/MainLayout';
 import AdminAuditPage from './pages/AdminAuditPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -30,14 +31,16 @@ function App() {
           <Route path="materials/create" element={<MaterialCreatePage />} />
           <Route path="favorites" element={<FavoritesPage />} />
           <Route path="my-materials" element={<MyMaterialsPage />} />
-          <Route path="admin" element={<AdminDashboardPage />} />
           <Route path="admin/register" element={<AdminRegisterPage />} />
-          <Route path="admin/users" element={<AdminUsersPage />} />
-          <Route path="admin/references" element={<AdminReferencesPage />} />
-          <Route path="admin/reports" element={<AdminReportsPage />} />
-          <Route path="admin/audit" element={<AdminAuditPage />} />
-          <Route path="moderation" element={<ModerationPage />} />
-          <Route path="admin/featured" element={<AdminFeaturedPage />} />
+          <Route path="admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="references" element={<AdminReferencesPage />} />
+            <Route path="reports" element={<AdminReportsPage />} />
+            <Route path="moderation" element={<ModerationPage />} />
+            <Route path="audit" element={<AdminAuditPage />} />
+            <Route path="featured" element={<AdminFeaturedPage />} />
+          </Route>
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<LoginPage defaultMode="register" />} />
           <Route path="profile" element={<ProfilePage />} />
