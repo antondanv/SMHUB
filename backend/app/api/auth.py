@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.events import record_event
 from app.core.security import create_access_token, decode_access_token
 from app.db.database import get_db
 from app.models.user import User
@@ -88,7 +89,10 @@ def register(
     db: Session = Depends(get_db),
 ) -> User:
     try:
-        return create_user(db, user_data)
+        new_user = create_user(db, user_data)
+        record_event(db, "register", user_id=new_user.id)
+        db.commit()
+        return new_user
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -110,7 +114,8 @@ def login(
         )
     
     access_token = create_access_token(subject=str(user.id))
-    
+    record_event(db, "login", user_id=user.id)
+    db.commit()
     return Token(access_token=access_token)
 
 

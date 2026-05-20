@@ -1,24 +1,121 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { getDashboardSummary } from '../api/adminApi';
+import { getDashboardSummary, getDashboardTimeseries } from '../api/adminApi';
 import { useAuth } from '../context/useAuth';
+
+const PERIODS = [
+  { value: '7d', label: '7 дней' },
+  { value: '30d', label: '30 дней' },
+  { value: '90d', label: '90 дней' },
+];
+
+const METRICS = [
+  { value: 'visits', label: 'Просмотры' },
+  { value: 'downloads', label: 'Скачивания' },
+  { value: 'likes', label: 'Лайки' },
+  { value: 'registrations', label: 'Регистрации' },
+  { value: 'uploads', label: 'Загрузки' },
+  { value: 'logins', label: 'Входы' },
+];
+
+function SparkLine({ data }) {
+  if (!data || data.length === 0) return <p className="profile-muted">Нет данных</p>;
+
+  const counts = data.map((d) => d.count);
+  const max = Math.max(...counts, 1);
+  const width = 600;
+  const height = 120;
+  const padX = 8;
+  const padY = 8;
+  const innerW = width - padX * 2;
+  const innerH = height - padY * 2;
+  const step = innerW / (data.length - 1 || 1);
+
+  const points = data.map((d, i) => {
+    const x = padX + i * step;
+    const y = padY + innerH - (d.count / max) * innerH;
+    return `${x},${y}`;
+  });
+
+  const areaPoints = [
+    `${padX},${padY + innerH}`,
+    ...points,
+    `${padX + innerW},${padY + innerH}`,
+  ].join(' ');
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="sparkline"
+      aria-hidden="true"
+      preserveAspectRatio="none"
+    >
+      <polygon points={areaPoints} className="sparkline__area" />
+      <polyline points={points.join(' ')} className="sparkline__line" />
+      {data.map((d, i) => {
+        const x = padX + i * step;
+        const y = padY + innerH - (d.count / max) * innerH;
+        return (
+          <circle
+            key={d.date}
+            cx={x}
+            cy={y}
+            r="3"
+            className="sparkline__dot"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function XAxisLabels({ data, period }) {
+  if (!data || data.length === 0) return null;
+  const skip = period === '90d' ? 14 : period === '30d' ? 5 : 1;
+  return (
+    <div className="sparkline-axis">
+      {data
+        .filter((_, i) => i % skip === 0 || i === data.length - 1)
+        .map((d) => (
+          <span key={d.date}>
+            {d.date.slice(5)}
+          </span>
+        ))}
+    </div>
+  );
+}
 
 const AdminDashboardPage = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [summary, setSummary] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(null);
+
+  const [selectedMetric, setSelectedMetric] = useState('visits');
+  const [selectedPeriod, setSelectedPeriod] = useState('7d');
+  const [tsData, setTsData] = useState(null);
+  const [tsLoading, setTsLoading] = useState(true);
+  const [tsError, setTsError] = useState(null);
 
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (!isAdmin) return;
-
     getDashboardSummary()
       .then(setSummary)
-      .catch(setError)
-      .finally(() => setIsLoading(false));
+      .catch(setSummaryError)
+      .finally(() => setSummaryLoading(false));
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    setTsLoading(true);
+    setTsError(null);
+    getDashboardTimeseries(selectedMetric, selectedPeriod)
+      .then((d) => setTsData(d.data))
+      .catch(setTsError)
+      .finally(() => setTsLoading(false));
+  }, [isAdmin, selectedMetric, selectedPeriod]);
 
   if (isAuthLoading) {
     return (
@@ -42,19 +139,19 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
-      {isLoading && (
+      {summaryLoading && (
         <div className="catalog-state">
           <p>Загрузка данных...</p>
         </div>
       )}
 
-      {!isLoading && error && (
+      {!summaryLoading && summaryError && (
         <div className="catalog-state catalog-state--error">
           <p>Не удалось загрузить статистику. Попробуйте обновить страницу.</p>
         </div>
       )}
 
-      {!isLoading && !error && summary && (
+      {!summaryLoading && !summaryError && summary && (
         <>
           <div className="admin-kpi-grid">
             <div className="admin-kpi-card">
@@ -88,17 +185,64 @@ const AdminDashboardPage = () => {
               <span className="admin-kpi-card__label">Отклонено</span>
             </div>
             <div className="admin-kpi-card">
-              <span className="admin-kpi-card__value">{summary.views_total.toLocaleString('ru-RU')}</span>
+              <span className="admin-kpi-card__value">
+                {summary.views_total.toLocaleString('ru-RU')}
+              </span>
               <span className="admin-kpi-card__label">Просмотров</span>
             </div>
             <div className="admin-kpi-card">
-              <span className="admin-kpi-card__value">{summary.downloads_total.toLocaleString('ru-RU')}</span>
+              <span className="admin-kpi-card__value">
+                {summary.downloads_total.toLocaleString('ru-RU')}
+              </span>
               <span className="admin-kpi-card__label">Скачиваний</span>
             </div>
             <div className="admin-kpi-card">
-              <span className="admin-kpi-card__value">{summary.likes_total.toLocaleString('ru-RU')}</span>
+              <span className="admin-kpi-card__value">
+                {summary.likes_total.toLocaleString('ru-RU')}
+              </span>
               <span className="admin-kpi-card__label">Лайков</span>
             </div>
+          </div>
+
+          <div className="surface-card admin-chart-card">
+            <div className="admin-chart-header">
+              <h2 className="admin-table-heading">Динамика активности</h2>
+              <div className="admin-chart-controls">
+                <div className="admin-tab-group">
+                  {METRICS.map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      className={`admin-tab${selectedMetric === m.value ? ' is-active' : ''}`}
+                      onClick={() => setSelectedMetric(m.value)}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="admin-tab-group">
+                  {PERIODS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      className={`admin-tab${selectedPeriod === p.value ? ' is-active' : ''}`}
+                      onClick={() => setSelectedPeriod(p.value)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {tsLoading && <p className="profile-muted">Загрузка графика...</p>}
+            {!tsLoading && tsError && <p className="profile-muted">Ошибка загрузки графика.</p>}
+            {!tsLoading && !tsError && tsData && (
+              <div className="sparkline-wrap">
+                <SparkLine data={tsData} />
+                <XAxisLabels data={tsData} period={selectedPeriod} />
+              </div>
+            )}
           </div>
 
           <div className="admin-tables-grid">
