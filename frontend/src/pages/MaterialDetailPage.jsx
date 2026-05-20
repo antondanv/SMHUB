@@ -318,9 +318,7 @@ const MaterialDetailPage = () => {
     !!user &&
     (user.id === material.author?.id ||
       user.role_name === 'admin' ||
-      user.role_name === 'moderator' ||
-      user.role === 'admin' ||
-      user.role === 'moderator');
+      user.role === 'admin');
   const viewerUrl = getMaterialFileUrl(material.id);
 
   return (
