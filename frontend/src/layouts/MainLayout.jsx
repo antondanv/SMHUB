@@ -3,9 +3,9 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from
 import { useAuth } from '../context/useAuth';
 
 const MainLayout = () => {
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const canModerate = user?.role === 'moderator' || user?.role === 'admin';
   const isLoginPage = location.pathname === '/login';
@@ -39,11 +39,6 @@ const MainLayout = () => {
 
   function getNavLinkClassName({ isActive }) {
     return `site-nav__link${isActive ? ' is-active' : ''}`;
-  }
-
-  function handleLogout() {
-    logout();
-    navigate('/');
   }
 
   function getGuestAction() {
@@ -119,14 +114,9 @@ const MainLayout = () => {
 
           <div className="header-tools">
             {isAuthenticated ? (
-              <>
-                <Link className="button button--header" to="/materials/create">
-                  Загрузить
-                </Link>
-                <button className="nav-button" type="button" onClick={handleLogout}>
-                  Выйти
-                </button>
-              </>
+              <Link className="button button--header" to="/materials/create">
+                Загрузить
+              </Link>
             ) : null}
             <form
               className="header-search"
