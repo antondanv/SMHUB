@@ -745,6 +745,15 @@ h3 {
   gap: var(--space-sm);
   justify-items: center;
   text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.step-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
 }
 
 .step-card p {
