@@ -140,6 +140,7 @@ def serialize_material(
         published_at=material.published_at,
         created_at=material.created_at,
         updated_at=material.updated_at,
+        is_editorial=material.is_editorial,
         is_favorite=is_favorite,
         is_liked=is_liked,
         avg_rating=material.avg_rating,

@@ -58,6 +58,7 @@ export function toMaterialCardView(material) {
     views: material.views_count,
     downloads: material.downloads_count,
     favoritesCount: material.favorites_count,
+    isEditorial: material.is_editorial || false,
     fileType: getFileTypeLabel(material),
     fileSize: formatFileSize(material.file_size),
     status: material.status,
