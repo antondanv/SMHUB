@@ -1,9 +1,29 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 
 function MaterialCard({ material, showStatus = false, actionLabel = 'Открыть' }) {
+  const navigate = useNavigate();
+
+  function handleCardClick() {
+    navigate(`/materials/${material.id}`);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      navigate(`/materials/${material.id}`);
+    }
+  }
+
   return (
-    <article className="material-card">
+    <article
+      className="material-card"
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="link"
+      aria-label={`Открыть материал: ${material.title}`}
+    >
       <div className="material-card__top">
         <div className="material-card__file">
           <span>{material.fileType}</span>
@@ -13,6 +33,7 @@ function MaterialCard({ material, showStatus = false, actionLabel = 'Откры�
           className={`bookmark-button${material.isFavorite ? ' is-active' : ''}`}
           type="button"
           aria-label={material.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+          onClick={(e) => e.stopPropagation()}
         >
           {material.isFavorite ? 'Сохранено' : 'Сохранить'}
         </button>
