@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
 import CourseSelect from '../components/selectors/CourseSelect';
 import ProgramSelect from '../components/selectors/ProgramSelect';
@@ -11,7 +11,8 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const { setUser: setAuthUser } = useAuth();
+  const navigate = useNavigate();
+  const { setUser: setAuthUser, logout } = useAuth();
   const {
     courses,
     programs,
@@ -143,6 +144,15 @@ const ProfilePage = () => {
               <span>Учебная группа</span>
             </div>
           </div>
+
+          <button
+            type="button"
+            className="button button--ghost"
+            style={{ marginTop: 'auto', width: '100%' }}
+            onClick={() => { logout(); navigate('/'); }}
+          >
+            Выйти из аккаунта
+          </button>
         </aside>
 
         <div className="surface-card surface-card--form">
