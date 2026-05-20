@@ -1741,6 +1741,40 @@ small {
   font-weight: 700;
 }
 
+.admin-layout {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.admin-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0 var(--space-sm);
+  border-bottom: 1px solid var(--outline-variant, rgba(0, 0, 0, 0.1));
+}
+
+.admin-menu__link {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-base) var(--space-md);
+  border-radius: var(--radius-full);
+  background: var(--surface-container-low);
+  color: var(--secondary);
+  font-size: var(--fs-body-sm);
+  font-weight: 600;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.admin-menu__link:hover {
+  color: var(--primary);
+}
+
+.admin-menu__link.is-active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
 .reports-list {
   display: grid;
   gap: var(--space-md);
