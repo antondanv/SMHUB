@@ -31,7 +31,7 @@ def require_moderation_access(current_user: User) -> None:
     if not is_privileged_user(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Moderator or admin access is required",
+            detail="Admin access is required",
         )
 
 
