@@ -137,6 +137,13 @@ class FavoriteToggleResponse(BaseModel):
     favorites_count: int
 
 
+class LikeToggleResponse(BaseModel):
+    likes_count: int
+    is_liked: bool
+    is_favorite: bool
+    favorites_count: int
+
+
 class MaterialListResponse(BaseModel):
     items: list[MaterialSummaryResponse]
     total: int

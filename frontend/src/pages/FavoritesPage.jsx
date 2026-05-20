@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import MaterialCard from '../components/MaterialCard';
-import { getMyFavorites, removeMaterialFromFavorites } from '../api/materialsApi';
+import { getMyFavorites } from '../api/materialsApi';
 import { useAuth } from '../context/useAuth';
 import { toMaterialCardView } from '../utils/materials';
 
@@ -20,7 +20,6 @@ const FavoritesPage = () => {
   const [materials, setMaterials] = useState([]);
   const [pageError, setPageError] = useState('');
   const [isPageLoading, setIsPageLoading] = useState(true);
-  const [pendingMaterialId, setPendingMaterialId] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -59,19 +58,9 @@ const FavoritesPage = () => {
     };
   }, [isAuthenticated]);
 
-  async function handleToggleFavorite(material) {
-    setPendingMaterialId(material.id);
-    setPageError('');
-
-    try {
-      await removeMaterialFromFavorites(material.id);
-      setMaterials((currentMaterials) =>
-        currentMaterials.filter((item) => item.id !== material.id)
-      );
-    } catch (requestError) {
-      setPageError(getErrorMessage(requestError));
-    } finally {
-      setPendingMaterialId(null);
+  function handleLikeToggle(materialId, isLiked) {
+    if (!isLiked) {
+      setMaterials((current) => current.filter((item) => item.id !== materialId));
     }
   }
 
@@ -119,8 +108,7 @@ const FavoritesPage = () => {
                 key={material.id}
                 material={materialView}
                 actionLabel="Открыть материал"
-                onToggleFavorite={() => handleToggleFavorite(material)}
-                isFavoritePending={pendingMaterialId === material.id}
+                onLikeToggle={(isLiked) => handleLikeToggle(material.id, isLiked)}
               />
             );
           })}
