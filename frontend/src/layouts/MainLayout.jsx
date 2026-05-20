@@ -5,7 +5,7 @@ const MainLayout = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const canModerate = user?.role === 'moderator' || user?.role === 'admin';
+  const canModerate = user?.role === 'admin';
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
 
