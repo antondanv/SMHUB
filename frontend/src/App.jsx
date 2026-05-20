@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminAuditPage from './pages/AdminAuditPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminFeaturedPage from './pages/AdminFeaturedPage';
 import AdminReferencesPage from './pages/AdminReferencesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -34,6 +35,7 @@ function App() {
           <Route path="admin/reports" element={<AdminReportsPage />} />
           <Route path="admin/audit" element={<AdminAuditPage />} />
           <Route path="moderation" element={<ModerationPage />} />
+          <Route path="admin/featured" element={<AdminFeaturedPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<LoginPage defaultMode="register" />} />
           <Route path="profile" element={<ProfilePage />} />

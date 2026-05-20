@@ -9,6 +9,7 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const canModerate = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
   const [openReports, setOpenReports] = useState(0);
 
   useEffect(() => {
@@ -136,6 +137,13 @@ const MainLayout = () => {
                         </NavLink>
                       </li>
                     </>
+                  ) : null}
+                  {isAdmin ? (
+                    <li>
+                      <NavLink to="/admin/featured" className={getNavLinkClassName}>
+                        Витрина
+                      </NavLink>
+                    </li>
                   ) : null}
                 </>
               ) : null}
