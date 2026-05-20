@@ -12,6 +12,7 @@ import {
 } from '../api/materialsApi';
 import LikeButton from '../components/LikeButton';
 import RatingStars from '../components/RatingStars';
+import ReportButton from '../components/ReportButton';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/useAuth';
 
@@ -370,6 +371,9 @@ const MaterialDetailPage = () => {
                     </button>
                   </>
                 )}
+                {isAuthenticated && !canEdit && (
+                  <ReportButton targetType="material" targetId={material.id} />
+                )}
               </div>
             </div>
           </div>
@@ -516,24 +520,33 @@ const MaterialDetailPage = () => {
                     ) : (
                       <>
                         <p>{comment.content}</p>
-                        {comment.can_edit && (
-                          <div className="comment-compose__actions">
-                            <button
-                              className="button button--ghost"
-                              type="button"
-                              onClick={() => startEditingComment(comment)}
-                            >
-                              Редактировать
-                            </button>
-                            <button
-                              className="button button--ghost"
-                              type="button"
-                              onClick={() => handleCommentDelete(comment.id)}
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                        )}
+                        <div className="comment-compose__actions">
+                          {comment.can_edit && (
+                            <>
+                              <button
+                                className="button button--ghost"
+                                type="button"
+                                onClick={() => startEditingComment(comment)}
+                              >
+                                Редактировать
+                              </button>
+                              <button
+                                className="button button--ghost"
+                                type="button"
+                                onClick={() => handleCommentDelete(comment.id)}
+                              >
+                                Удалить
+                              </button>
+                            </>
+                          )}
+                          {isAuthenticated && !comment.can_edit && (
+                            <ReportButton
+                              targetType="comment"
+                              targetId={comment.id}
+                              label="Пожаловаться"
+                            />
+                          )}
+                        </div>
                       </>
                     )}
                   </article>
