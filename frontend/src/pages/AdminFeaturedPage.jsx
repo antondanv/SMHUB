@@ -56,17 +56,20 @@ const AdminFeaturedPage = () => {
     if (!isAuthenticated || !isAdmin) return;
 
     let isActive = true;
-    setIsPageLoading(true);
-    listFeaturedAdmin()
-      .then((data) => {
+
+    async function loadFeaturedItems() {
+      setIsPageLoading(true);
+      try {
+        const data = await listFeaturedAdmin();
         if (isActive) setItems(data);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (isActive) setError(getErrorMessage(err, 'Не удалось загрузить витрину.'));
-      })
-      .finally(() => {
+      } finally {
         if (isActive) setIsPageLoading(false);
-      });
+      }
+    }
+
+    loadFeaturedItems();
 
     return () => {
       isActive = false;
@@ -76,24 +79,33 @@ const AdminFeaturedPage = () => {
   useEffect(() => {
     const trimmed = searchQuery.trim();
     if (!trimmed) {
-      setSearchResults([]);
+      function resetSearchState() {
+        setSearchResults([]);
+        setIsSearching(false);
+      }
+
+      resetSearchState();
       return undefined;
     }
 
     let isActive = true;
-    setIsSearching(true);
-    const timer = setTimeout(() => {
-      getMaterials({ search: trimmed, per_page: 10 })
-        .then((data) => {
-          if (isActive) setSearchResults(data.items || []);
-        })
-        .catch(() => {
-          if (isActive) setSearchResults([]);
-        })
-        .finally(() => {
-          if (isActive) setIsSearching(false);
-        });
-    }, 300);
+    function scheduleSearch() {
+      setIsSearching(true);
+      return setTimeout(() => {
+        getMaterials({ search: trimmed, per_page: 10 })
+          .then((data) => {
+            if (isActive) setSearchResults(data.items || []);
+          })
+          .catch(() => {
+            if (isActive) setSearchResults([]);
+          })
+          .finally(() => {
+            if (isActive) setIsSearching(false);
+          });
+      }, 300);
+    }
+
+    const timer = scheduleSearch();
 
     return () => {
       isActive = false;

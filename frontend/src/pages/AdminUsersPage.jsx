@@ -61,30 +61,52 @@ const AdminUsersPage = () => {
 
   useEffect(() => {
     if (!isAdmin) return;
-    setIsLoading(true);
-    setError('');
-    const params = { page, per_page: 20 };
-    if (search) params.search = search;
-    if (roleFilter) params.role = roleFilter;
-    if (activeFilter !== '') params.is_active = activeFilter === 'true';
 
-    getAdminUsers(params)
-      .then((data) => {
+    async function loadUsers() {
+      setIsLoading(true);
+      setError('');
+      const params = { page, per_page: 20 };
+      if (search) params.search = search;
+      if (roleFilter) params.role = roleFilter;
+      if (activeFilter !== '') params.is_active = activeFilter === 'true';
+
+      try {
+        const data = await getAdminUsers(params);
         setUsers(data.items);
         setTotal(data.total);
         setTotalPages(data.total_pages);
-      })
-      .catch(() => setError('Не удалось загрузить список пользователей.'))
-      .finally(() => setIsLoading(false));
+      } catch {
+        setError('Не удалось загрузить список пользователей.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadUsers();
   }, [isAdmin, search, roleFilter, activeFilter, page]);
 
   useEffect(() => {
-    if (!activeUserId) { setActiveUser(null); return; }
-    setDetailLoading(true);
-    getAdminUser(activeUserId)
-      .then(setActiveUser)
-      .catch(() => setActiveUser(null))
-      .finally(() => setDetailLoading(false));
+    if (!activeUserId) {
+      function resetUserDetail() {
+        setActiveUser(null);
+      }
+
+      resetUserDetail();
+      return;
+    }
+
+    async function loadUserDetail() {
+      setDetailLoading(true);
+      try {
+        setActiveUser(await getAdminUser(activeUserId));
+      } catch {
+        setActiveUser(null);
+      } finally {
+        setDetailLoading(false);
+      }
+    }
+
+    loadUserDetail();
   }, [activeUserId]);
 
   function askAction(action) {

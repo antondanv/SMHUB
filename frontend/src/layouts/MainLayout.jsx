@@ -17,7 +17,11 @@ const MainLayout = () => {
   const searchInputRef = useRef(null);
 
   useEffect(() => {
-    setHeaderQuery(isOnMaterials ? (searchParams.get('search') || '') : '');
+    function syncHeaderQuery() {
+      setHeaderQuery(isOnMaterials ? (searchParams.get('search') || '') : '');
+    }
+
+    syncHeaderQuery();
   }, [isOnMaterials, searchParams]);
 
   useEffect(() => {

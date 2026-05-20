@@ -32,14 +32,21 @@ const AdminReportsPage = () => {
 
   useEffect(() => {
     if (!isAdmin) return;
-    setIsLoading(true);
-    getReports(statusFilter)
-      .then((data) => {
+
+    async function loadReports() {
+      setIsLoading(true);
+      try {
+        const data = await getReports(statusFilter);
         setReports(data.items);
         setTotal(data.total);
-      })
-      .catch(() => setError('Не удалось загрузить жалобы.'))
-      .finally(() => setIsLoading(false));
+      } catch {
+        setError('Не удалось загрузить жалобы.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadReports();
   }, [isAdmin, statusFilter]);
 
   async function handle(reportId, nextStatus, action = 'none') {
