@@ -6,17 +6,8 @@ function MaterialCard({
   material,
   showStatus = false,
   actionLabel = 'Открыть',
-  onToggleFavorite,
-  isFavoritePending = false,
+  onLikeToggle,
 }) {
-  async function handleFavoriteClick() {
-    if (!onToggleFavorite) {
-      return;
-    }
-
-    await onToggleFavorite(material);
-  }
-
   return (
     <article className="material-card">
       <div className="material-card__top">
@@ -24,15 +15,6 @@ function MaterialCard({
           <span>{material.fileType}</span>
           <strong>{material.fileSize}</strong>
         </div>
-        <button
-          className={`bookmark-button${material.isFavorite ? ' is-active' : ''}`}
-          type="button"
-          aria-label={material.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
-          disabled={isFavoritePending}
-          onClick={handleFavoriteClick}
-        >
-          {material.isFavorite ? 'Сохранено' : 'Сохранить'}
-        </button>
       </div>
 
       <div className="material-card__body">
@@ -60,15 +42,12 @@ function MaterialCard({
         <div className="metric-row">
           <span>{material.views} просмотров</span>
           <span>{material.downloads} скачиваний</span>
-          <span>
-            {typeof material.favoritesCount === 'number'
-              ? `${material.favoritesCount} в избранном`
-              : `${material.rating} ★`}
-          </span>
+          {material.rating ? <span>{material.rating} ★</span> : null}
           <LikeButton
             materialId={material.id}
             initialCount={material.likes || 0}
             initialIsLiked={material.isLiked || false}
+            onToggle={onLikeToggle}
           />
         </div>
       </div>
