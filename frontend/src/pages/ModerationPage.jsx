@@ -8,6 +8,7 @@ import {
 } from '../api/materialsApi';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/useAuth';
+import { isAdminUser } from '../utils/auth';
 import { useReferenceData } from '../context/useReferenceData';
 import { formatMaterialDate, formatMaterialFileSize } from '../utils/materials';
 
@@ -89,7 +90,7 @@ const ModerationPage = () => {
   const dateFrom = searchParams.get('date_from') || '';
   const dateTo = searchParams.get('date_to') || '';
 
-  const hasModerationAccess = user?.role_name === 'admin' || user?.role === 'admin';
+  const hasModerationAccess = isAdminUser(user);
   const activeMaterial = materials.find((m) => m.id === activeMaterialId) || null;
   const allSelected = materials.length > 0 && selected.size === materials.length;
 
