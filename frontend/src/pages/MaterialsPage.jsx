@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   addMaterialToFavorites,
@@ -67,11 +67,13 @@ const MaterialsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { subjects, materialTypes, courses, programs } = useReferenceData();
+  const searchInputRef = useRef(null);
   const [filters, setFilters] = useState(() => ({
     ...DEFAULT_FILTERS,
     search: searchParams.get('search') || '',
+    sort: searchParams.get('sort') === 'popular' ? 'popular' : DEFAULT_FILTERS.sort,
   }));
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('search') || '');
   const [page, setPage] = useState(1);
   const [materials, setMaterials] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -93,6 +95,12 @@ const MaterialsPage = () => {
     }, 400);
     return () => clearTimeout(timer);
   }, [filters.search]);
+
+  useEffect(() => {
+    if (searchParams.get('focus') === 'search') {
+      searchInputRef.current?.focus();
+    }
+  }, [searchParams]);
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -233,6 +241,7 @@ const MaterialsPage = () => {
             <label className="catalog-search" aria-label="Поиск по каталогу">
               <span>⌕</span>
               <input
+                ref={searchInputRef}
                 type="search"
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
