@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  addMaterialToFavorites,
   createMaterialComment,
   deleteMaterial,
   deleteMaterialComment,
@@ -9,11 +8,11 @@ import {
   getMaterialById,
   getMaterialComments,
   getMaterialFileUrl,
-  removeMaterialFromFavorites,
   updateMaterialComment,
 } from '../api/materialsApi';
 import LikeButton from '../components/LikeButton';
 import RatingStars from '../components/RatingStars';
+import ReportButton from '../components/ReportButton';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/useAuth';
 
@@ -80,7 +79,6 @@ const MaterialDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloadPending, setIsDownloadPending] = useState(false);
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
-  const [isFavoritePending, setIsFavoritePending] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
@@ -175,41 +173,6 @@ const MaterialDetailPage = () => {
       );
     } finally {
       setIsDownloadPending(false);
-    }
-  }
-
-  async function handleToggleFavorite() {
-    if (!material) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    setActionMessage('');
-    setIsFavoritePending(true);
-
-    try {
-      const response = material.is_favorite
-        ? await removeMaterialFromFavorites(material.id)
-        : await addMaterialToFavorites(material.id);
-
-      setMaterial((currentMaterial) => ({
-        ...currentMaterial,
-        is_favorite: response.is_favorite,
-        favorites_count: response.favorites_count,
-      }));
-    } catch (requestError) {
-      setActionMessage(
-        getErrorMessage(
-          requestError,
-          'Не удалось обновить избранное. Попробуйте позже.'
-        )
-      );
-    } finally {
-      setIsFavoritePending(false);
     }
   }
 
@@ -356,9 +319,7 @@ const MaterialDetailPage = () => {
     !!user &&
     (user.id === material.author?.id ||
       user.role_name === 'admin' ||
-      user.role_name === 'moderator' ||
-      user.role === 'admin' ||
-      user.role === 'moderator');
+      user.role === 'admin');
   const viewerUrl = getMaterialFileUrl(material.id);
 
   return (
@@ -370,6 +331,7 @@ const MaterialDetailPage = () => {
               <div>
                 <div className="detail-inline-meta">
                   <StatusBadge status={material.status} />
+                  {material.is_editorial && <span className="editorial-badge">От редакции</span>}
                   <span>{material.views_count} просмотров</span>
                 </div>
                 <h1>{material.title}</h1>
@@ -386,14 +348,6 @@ const MaterialDetailPage = () => {
                   disabled={isDownloadPending}
                 >
                   {isDownloadPending ? 'Скачиваем...' : 'Скачать'}
-                </button>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  onClick={handleToggleFavorite}
-                  disabled={isFavoritePending}
-                >
-                  {material.is_favorite ? 'Убрать из избранного' : 'Сохранить'}
                 </button>
                 <LikeButton
                   materialId={material.id}
@@ -416,6 +370,9 @@ const MaterialDetailPage = () => {
                       Удалить
                     </button>
                   </>
+                )}
+                {isAuthenticated && !canEdit && (
+                  <ReportButton targetType="material" targetId={material.id} />
                 )}
               </div>
             </div>
@@ -563,24 +520,33 @@ const MaterialDetailPage = () => {
                     ) : (
                       <>
                         <p>{comment.content}</p>
-                        {comment.can_edit && (
-                          <div className="comment-compose__actions">
-                            <button
-                              className="button button--ghost"
-                              type="button"
-                              onClick={() => startEditingComment(comment)}
-                            >
-                              Редактировать
-                            </button>
-                            <button
-                              className="button button--ghost"
-                              type="button"
-                              onClick={() => handleCommentDelete(comment.id)}
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                        )}
+                        <div className="comment-compose__actions">
+                          {comment.can_edit && (
+                            <>
+                              <button
+                                className="button button--ghost"
+                                type="button"
+                                onClick={() => startEditingComment(comment)}
+                              >
+                                Редактировать
+                              </button>
+                              <button
+                                className="button button--ghost"
+                                type="button"
+                                onClick={() => handleCommentDelete(comment.id)}
+                              >
+                                Удалить
+                              </button>
+                            </>
+                          )}
+                          {isAuthenticated && !comment.can_edit && (
+                            <ReportButton
+                              targetType="comment"
+                              targetId={comment.id}
+                              label="Пожаловаться"
+                            />
+                          )}
+                        </div>
                       </>
                     )}
                   </article>

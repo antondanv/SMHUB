@@ -7,6 +7,7 @@ from app.api.materials_common import (
     assert_material_is_visible,
     base_material_query,
     fetch_favorite_ids,
+    fetch_like_ids,
     serialize_material,
 )
 from app.db.database import get_db
@@ -36,6 +37,7 @@ def get_my_favorites(
 
     material_ids = [favorite.material_id for favorite in favorites]
     favorite_ids = fetch_favorite_ids(db, current_user.id, material_ids)
+    like_ids = fetch_like_ids(db, current_user.id, material_ids)
     materials = {
         material.id: material
         for material in db.scalars(
@@ -60,7 +62,11 @@ def get_my_favorites(
 
     return MaterialListResponse(
         items=[
-            serialize_material(material, is_favorite=material.id in favorite_ids)
+            serialize_material(
+                material,
+                is_favorite=material.id in favorite_ids,
+                is_liked=material.id in like_ids,
+            )
             for material in ordered_items
         ],
         total=len(ordered_items),
