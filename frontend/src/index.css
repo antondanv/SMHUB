@@ -1407,6 +1407,112 @@ small {
   letter-spacing: 0.02em;
 }
 
+/* ===== Admin Users ===== */
+.admin-users-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.admin-users-table {
+  margin-top: var(--space-md);
+}
+
+.admin-users-row {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.admin-users-row:hover td {
+  background: var(--surface-container-low);
+}
+
+.admin-users-row.is-active td {
+  background: var(--secondary-container);
+}
+
+.admin-user-detail {
+  position: sticky;
+  top: 80px;
+}
+
+.role-badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-label-caps);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.role-badge--admin {
+  color: var(--on-primary);
+  background: var(--primary);
+}
+
+.role-badge--student {
+  color: var(--secondary);
+  background: var(--surface-container);
+}
+
+.status-active {
+  color: var(--tertiary-container);
+  font-weight: 600;
+  font-size: var(--fs-label-caps);
+}
+
+.status-blocked {
+  color: var(--error);
+  font-weight: 600;
+  font-size: var(--fs-label-caps);
+}
+
+.action-row--column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.catalog-search-inline {
+  flex: 1;
+  min-height: 36px;
+  padding: 0 12px;
+  background: var(--surface-container-low);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body-sm);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-card {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  box-shadow: var(--shadow-float);
+}
+
+.modal-card p {
+  font-size: var(--fs-body-md);
+  font-weight: 500;
+  margin: 0;
+}
+
 /* ===== Auth ===== */
 .auth-shell {
   display: grid;
