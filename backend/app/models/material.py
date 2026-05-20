@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, SmallInteger, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, SmallInteger, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -42,6 +42,7 @@ class Material(Base):
     likes_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     comments_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     favorites_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_editorial: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     avg_rating: Mapped[float] = mapped_column(Float, nullable=True)
     ratings_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
