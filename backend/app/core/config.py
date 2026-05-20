@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     app_name: str = "SMHUB"
     app_env: str = "development"
     auto_db_bootstrap: bool = True
+    admin_registration_secret: str = ""
+    first_admin_email: str = ""
+    first_admin_password: str = ""
+    first_admin_username: str = ""
 
     # Для Vercel/Neon предпочитаем direct/unpooled URL, если он доступен.
     database_url: str = Field(

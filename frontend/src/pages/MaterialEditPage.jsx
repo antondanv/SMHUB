@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getMaterialById, updateMaterial } from '../api/materialsApi';
 import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
+import { isAdminUser } from '../utils/auth';
 
 const MaterialEditPage = () => {
   const { id } = useParams();
@@ -34,7 +35,7 @@ const MaterialEditPage = () => {
         const canEdit =
           user &&
           (user.id === material.author_id ||
-            user.role === 'admin');
+            isAdminUser(user));
 
         if (!canEdit) {
           navigate(`/materials/${id}`, { replace: true });

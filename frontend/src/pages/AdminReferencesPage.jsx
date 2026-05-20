@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { createReference, deleteReference, updateReference } from '../api/adminApi';
 import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
+import { isAdminUser } from '../utils/auth';
 
 const TABS = [
   { key: 'subjects', label: 'Предметы', apiType: 'subjects', fields: ['name', 'description'] },
@@ -171,7 +172,7 @@ const AdminReferencesPage = () => {
   const [activeTab, setActiveTab] = useState('subjects');
   const [localData, setLocalData] = useState({});
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = isAdminUser(user);
 
   if (isAuthLoading) return <section className="page-shell"><p className="profile-muted">Загрузка...</p></section>;
   if (!isAuthenticated || !isAdmin) return <Navigate to="/" replace />;
