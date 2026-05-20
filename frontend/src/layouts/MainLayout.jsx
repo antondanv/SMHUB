@@ -7,7 +7,8 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canModerate = user?.role === 'moderator' || user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
+  const canModerate = isAdmin;
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
   const isOnMaterials = location.pathname === '/materials';
@@ -101,11 +102,18 @@ const MainLayout = () => {
                     </NavLink>
                   </li>
                   {canModerate ? (
-                    <li>
-                      <NavLink to="/moderation" className={getNavLinkClassName}>
-                        Модерация
-                      </NavLink>
-                    </li>
+                    <>
+                      <li>
+                        <NavLink to="/moderation" className={getNavLinkClassName}>
+                          Модерация
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/admin" className={getNavLinkClassName}>
+                          Админка
+                        </NavLink>
+                      </li>
+                    </>
                   ) : null}
                 </>
               ) : null}

@@ -16,6 +16,7 @@ from app.models.comment import Comment
 from app.models.like import Like
 from app.models.favorite import Favorite
 from app.models.rating import Rating
+from app.models.user_event import UserEvent
 
 __all__ = [
     "UserRoleEnum",
@@ -34,4 +35,5 @@ __all__ = [
     "Like",
     "Favorite",
     "Rating",
+    "UserEvent",
 ]

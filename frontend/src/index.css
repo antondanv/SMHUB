@@ -1407,6 +1407,196 @@ small {
   letter-spacing: 0.02em;
 }
 
+/* ===== Admin Dashboard ===== */
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.admin-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--surface-border);
+}
+
+.admin-kpi-card--warn {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.admin-kpi-card--danger {
+  border-color: var(--error);
+  background: var(--error-container);
+}
+
+.admin-kpi-card__value {
+  font-size: var(--fs-headline-lg);
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1;
+}
+
+.admin-kpi-card__label {
+  font-size: var(--fs-label-md);
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+.admin-kpi-card__sub {
+  font-size: var(--fs-label-caps);
+  color: var(--outline);
+}
+
+.admin-kpi-card__link {
+  font-size: var(--fs-label-caps);
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: auto;
+}
+
+.admin-kpi-card__link:hover {
+  text-decoration: underline;
+}
+
+.admin-tables-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.admin-table-heading {
+  font-size: var(--fs-body-md);
+  font-weight: 700;
+  margin: 0 0 var(--space-md);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-body-sm);
+}
+
+.admin-table th {
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 2px solid var(--surface-border);
+  font-weight: 700;
+  color: var(--secondary);
+  font-size: var(--fs-label-caps);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--surface-border);
+  color: var(--on-surface);
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table a {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.admin-table a:hover {
+  text-decoration: underline;
+}
+
+.admin-chart-card {
+  margin-bottom: var(--space-md);
+}
+
+.admin-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.admin-chart-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  align-items: flex-end;
+}
+
+.admin-tab-group {
+  display: flex;
+  gap: 4px;
+}
+
+.admin-tab {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--surface-border);
+  background: transparent;
+  color: var(--secondary);
+  font-size: var(--fs-label-caps);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.admin-tab:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.admin-tab.is-active {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+
+.sparkline-wrap {
+  width: 100%;
+}
+
+.sparkline {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+
+.sparkline__area {
+  fill: var(--primary-fixed);
+  opacity: 0.4;
+}
+
+.sparkline__line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.sparkline__dot {
+  fill: var(--primary);
+}
+
+.sparkline-axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px 0;
+  color: var(--outline);
+  font-size: var(--fs-label-caps);
+}
+
 /* ===== Auth ===== */
 .auth-shell {
   display: grid;

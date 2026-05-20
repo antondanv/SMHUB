@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user, get_optional_user
+from app.api.events import record_event
 from app.api.materials_common import (
     assert_material_is_visible,
     base_material_query,
@@ -399,6 +400,7 @@ async def create_material(
     material.status = pending_status
 
     db.add(material)
+    record_event(db, "material_upload", user_id=current_user.id)
 
     try:
         db.commit()
@@ -495,6 +497,7 @@ def like_material(
 
     db.add(Like(user_id=current_user.id, material_id=material_id))
     material.likes_count += 1
+    record_event(db, "material_like", user_id=current_user.id, entity_id=material_id)
 
     try:
         db.commit()
@@ -642,6 +645,7 @@ def download_material(
         )
 
     material.downloads_count += 1
+    record_event(db, "material_download", user_id=current_user.id if current_user else None, entity_id=material_id)
     db.commit()
 
     return FileResponse(
@@ -705,6 +709,7 @@ def get_material_detail(
     assert_material_is_visible(material, current_user)
 
     material.views_count += 1
+    record_event(db, "material_view", user_id=current_user.id if current_user else None, entity_id=material_id)
     db.commit()
     db.refresh(material)
 
