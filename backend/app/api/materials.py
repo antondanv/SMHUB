@@ -21,6 +21,7 @@ from app.api.materials_common import (
     is_privileged_user,
     serialize_material,
 )
+from app.schemas.material import LikeToggleResponse
 from app.core.config import BASE_DIR
 from app.db.database import get_db
 from app.models.course import Course
@@ -473,12 +474,12 @@ def remove_material_from_favorites(
     )
 
 
-@router.post("/{material_id}/like")
+@router.post("/{material_id}/like", response_model=LikeToggleResponse)
 def like_material(
     material_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> LikeToggleResponse:
     material = get_material_or_404(db, material_id)
 
     already_liked = db.scalar(
@@ -496,6 +497,16 @@ def like_material(
     db.add(Like(user_id=current_user.id, material_id=material_id))
     material.likes_count += 1
 
+    existing_favorite = db.scalar(
+        select(Favorite).where(
+            Favorite.user_id == current_user.id,
+            Favorite.material_id == material_id,
+        )
+    )
+    if existing_favorite is None:
+        db.add(Favorite(user_id=current_user.id, material_id=material_id))
+        material.favorites_count += 1
+
     try:
         db.commit()
     except SQLAlchemyError as exc:
@@ -505,15 +516,20 @@ def like_material(
             detail="Failed to like",
         ) from exc
 
-    return {"likes_count": material.likes_count, "is_liked": True}
+    return LikeToggleResponse(
+        likes_count=material.likes_count,
+        is_liked=True,
+        is_favorite=True,
+        favorites_count=material.favorites_count,
+    )
 
 
-@router.delete("/{material_id}/like")
+@router.delete("/{material_id}/like", response_model=LikeToggleResponse)
 def unlike_material(
     material_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> LikeToggleResponse:
     material = get_material_or_404(db, material_id)
 
     like = db.scalar(
@@ -531,6 +547,16 @@ def unlike_material(
     db.delete(like)
     material.likes_count = max(0, material.likes_count - 1)
 
+    existing_favorite = db.scalar(
+        select(Favorite).where(
+            Favorite.user_id == current_user.id,
+            Favorite.material_id == material_id,
+        )
+    )
+    if existing_favorite is not None:
+        db.delete(existing_favorite)
+        material.favorites_count = max(0, material.favorites_count - 1)
+
     try:
         db.commit()
     except SQLAlchemyError as exc:
@@ -540,7 +566,12 @@ def unlike_material(
             detail="Failed to unlike",
         ) from exc
 
-    return {"likes_count": material.likes_count, "is_liked": False}
+    return LikeToggleResponse(
+        likes_count=material.likes_count,
+        is_liked=False,
+        is_favorite=False,
+        favorites_count=material.favorites_count,
+    )
 
 
 @router.post("/{material_id}/rating")

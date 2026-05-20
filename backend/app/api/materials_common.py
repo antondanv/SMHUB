@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.enums import MaterialStatus as MaterialStatusEnum
 from app.models.enums import UserRole
 from app.models.favorite import Favorite
+from app.models.like import Like
 from app.models.material import Material
 from app.models.material_status import MaterialStatus
 from app.models.user import User
@@ -96,6 +97,24 @@ def get_status_or_500(db: Session, status_name: MaterialStatusEnum) -> MaterialS
         )
 
     return material_status
+
+
+def fetch_like_ids(
+    db: Session,
+    user_id: int,
+    material_ids: Sequence[int],
+) -> set[int]:
+    if not material_ids:
+        return set()
+
+    like_rows = db.scalars(
+        select(Like.material_id).where(
+            Like.user_id == user_id,
+            Like.material_id.in_(material_ids),
+        )
+    ).all()
+
+    return set(like_rows)
 
 
 def fetch_favorite_ids(
