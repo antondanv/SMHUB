@@ -129,14 +129,25 @@ export async function getMyFavorites() {
   return response.data;
 }
 
-export async function getModerationQueue() {
-  const response = await apiClient.get('/moderation/materials');
-
+export async function getModerationQueue(params = {}) {
+  const response = await apiClient.get('/moderation/materials', { params });
   return response.data;
 }
 
-export async function moderateMaterial(materialId, status) {
-  const response = await apiClient.patch(`/moderation/materials/${materialId}`, { status });
+export async function moderateMaterial(materialId, status, comment = null) {
+  const response = await apiClient.patch(`/moderation/materials/${materialId}`, {
+    status,
+    comment,
+  });
+  return response.data;
+}
 
+export async function getModerationHistory(materialId) {
+  const response = await apiClient.get(`/moderation/materials/${materialId}/history`);
+  return response.data;
+}
+
+export async function bulkModerate(ids, action, comment = null) {
+  const response = await apiClient.post('/moderation/bulk', { ids, action, comment });
   return response.data;
 }
