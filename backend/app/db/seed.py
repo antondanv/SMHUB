@@ -47,6 +47,10 @@ PROGRAMS = [
 
 SUBJECTS = [
     {
+        "name": "Информатика",
+        "description": "Информация, кодирование, алгоритмы и базовые цифровые модели.",
+    },
+    {
         "name": "Математический анализ",
         "description": "Основы анализа, пределов, производных и интегралов.",
     },
@@ -59,12 +63,24 @@ SUBJECTS = [
         "description": "Базовые языки, алгоритмы и практика разработки.",
     },
     {
+        "name": "Алгоритмы и структуры данных",
+        "description": "Базовые алгоритмы, деревья, графы и методы анализа задач.",
+    },
+    {
+        "name": "ООП",
+        "description": "Принципы объектно-ориентированного программирования и проектирования.",
+    },
+    {
         "name": "Базы данных",
         "description": "Реляционное моделирование, SQL и проектирование БД.",
     },
     {
         "name": "Дискретная математика",
         "description": "Логика, множества, графы и комбинаторика.",
+    },
+    {
+        "name": "Компьютерные сети",
+        "description": "Сетевые модели, протоколы, оборудование и основы передачи данных.",
     },
     {
         "name": "Операционные системы",
@@ -133,11 +149,16 @@ MIME_TYPES = [
 ]
 
 SUBJECT_PROGRAM_LINKS = [
+    {"subject_name": "Информатика", "program_code": "09.03.03", "course_number": 1},
     {"subject_name": "Программирование", "program_code": "09.03.03", "course_number": 1},
+    {"subject_name": "Алгоритмы и структуры данных", "program_code": "09.03.04", "course_number": 2},
+    {"subject_name": "ООП", "program_code": "09.03.04", "course_number": 2},
     {"subject_name": "Базы данных", "program_code": "09.03.03", "course_number": 2},
     {"subject_name": "Дискретная математика", "program_code": "09.03.03", "course_number": 1},
     {"subject_name": "Программирование", "program_code": "09.03.02", "course_number": 1},
     {"subject_name": "Базы данных", "program_code": "09.03.02", "course_number": 2},
+    {"subject_name": "Компьютерные сети", "program_code": "09.03.01", "course_number": 2},
+    {"subject_name": "Операционные системы", "program_code": "09.03.01", "course_number": 2},
 ]
 
 
