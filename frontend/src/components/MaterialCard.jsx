@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import LikeButton from './LikeButton';
 import StatusBadge from './StatusBadge';
 
@@ -9,7 +9,21 @@ function MaterialCard({
   onToggleFavorite,
   isFavoritePending = false,
 }) {
-  async function handleFavoriteClick() {
+  const navigate = useNavigate();
+
+  function handleCardClick() {
+    navigate(`/materials/${material.id}`);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      navigate(`/materials/${material.id}`);
+    }
+  }
+
+  async function handleFavoriteClick(e) {
+    e.stopPropagation();
     if (!onToggleFavorite) {
       return;
     }
@@ -18,7 +32,14 @@ function MaterialCard({
   }
 
   return (
-    <article className="material-card">
+    <article
+      className="material-card"
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="link"
+      aria-label={`Открыть материал: ${material.title}`}
+    >
       <div className="material-card__top">
         <div className="material-card__file">
           <span>{material.fileType}</span>
@@ -65,11 +86,13 @@ function MaterialCard({
               ? `${material.favoritesCount} в избранном`
               : `${material.rating} ★`}
           </span>
-          <LikeButton
-            materialId={material.id}
-            initialCount={material.likes || 0}
-            initialIsLiked={material.isLiked || false}
-          />
+          <span onClick={(e) => e.stopPropagation()}>
+            <LikeButton
+              materialId={material.id}
+              initialCount={material.likes || 0}
+              initialIsLiked={material.isLiked || false}
+            />
+          </span>
         </div>
       </div>
 
