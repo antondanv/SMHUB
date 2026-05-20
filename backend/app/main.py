@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.admin import router as admin_router
+from app.api.audit import router as audit_router
 from app.api.auth import router as auth_router
 from app.api.comments import router as comments_router
 from app.api.featured import router as featured_router
@@ -10,6 +12,7 @@ from app.api.materials import router as materials_router
 from app.api.material_types import router as material_types_router
 from app.api.moderation import router as moderation_router
 from app.api.programs import router as programs_router
+from app.api.reports import router as reports_router
 from app.api.subjects import router as subjects_router
 from app.api.users import router as users_router
 
@@ -29,6 +32,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(admin_router)
+app.include_router(audit_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(courses_router)
@@ -40,6 +45,7 @@ app.include_router(comments_router)
 app.include_router(homepage_router)
 app.include_router(featured_router)
 app.include_router(moderation_router)
+app.include_router(reports_router)
 
 
 @app.get("/health")

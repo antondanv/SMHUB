@@ -29,6 +29,7 @@ const initialFormData = {
   material_type_id: '',
   course_id: '',
   program_id: '',
+  is_editorial: false,
   file: null,
 };
 
@@ -68,11 +69,11 @@ const MaterialCreatePage = () => {
   }
 
   function handleChange(event) {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
 
     setFormData((currentFormData) => ({
       ...currentFormData,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   }
 
@@ -105,12 +106,14 @@ const MaterialCreatePage = () => {
         material_type_id: Number(formData.material_type_id),
         course_id: Number(selectedCourseId),
         program_id: Number(selectedProgramId),
+        is_editorial: formData.is_editorial,
         file: formData.file,
       });
 
-      setSuccess(
-        `Материал "${createdMaterial.title}" отправлен на модерацию и получил статус "${createdMaterial.status}".`
-      );
+      const successMsg = createdMaterial.is_editorial
+        ? `Материал «${createdMaterial.title}» опубликован от редакции.`
+        : `Материал «${createdMaterial.title}» отправлен на модерацию.`;
+      setSuccess(successMsg);
       setFormData(initialFormData);
       event.target.reset();
     } catch (submitError) {
@@ -257,6 +260,18 @@ const MaterialCreatePage = () => {
               />
               <small>Поддерживаются PDF, DOC, DOCX, PPT и PPTX размером до 20 МБ.</small>
             </label>
+
+            {user?.role === 'admin' && (
+              <label className="form-field--wide editorial-checkbox">
+                <input
+                  type="checkbox"
+                  name="is_editorial"
+                  checked={formData.is_editorial}
+                  onChange={handleChange}
+                />
+                Опубликовать от редакции (без очереди модерации)
+              </label>
+            )}
 
             <button
               type="submit"

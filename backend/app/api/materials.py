@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user, get_optional_user
+from app.api.events import record_event
 from app.api.materials_common import (
     assert_material_is_visible,
     base_material_query,
@@ -21,6 +22,7 @@ from app.api.materials_common import (
     is_privileged_user,
     serialize_material,
 )
+from app.schemas.material import LikeToggleResponse
 from app.core.config import BASE_DIR
 from app.db.database import get_db
 from app.models.course import Course
@@ -319,6 +321,7 @@ async def create_material(
     material_type_id: int = Form(...),
     course_id: int = Form(...),
     program_id: int = Form(...),
+    is_editorial: bool = Form(False),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -351,8 +354,18 @@ async def create_material(
     require_entity(db, Course, course_id, "Course not found")
     require_entity(db, Program, program_id, "Program not found")
 
+    if is_editorial and not is_privileged_user(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can publish editorial materials",
+        )
+
     mime_type = resolve_mime_type(db, original_file_name, file.content_type)
-    pending_status = get_status_or_500(db, MaterialStatusEnum.PENDING)
+
+    if is_editorial:
+        initial_status = get_status_or_500(db, MaterialStatusEnum.PUBLISHED)
+    else:
+        initial_status = get_status_or_500(db, MaterialStatusEnum.PENDING)
 
     file_bytes = await file.read()
     file_size = len(file_bytes)
@@ -385,7 +398,8 @@ async def create_material(
         course_id=course_id,
         program_id=program_id,
         mime_type_id=mime_type.id,
-        status_id=pending_status.id,
+        status_id=initial_status.id,
+        is_editorial=is_editorial,
         file_url=str(Path("uploads") / "materials" / stored_file_name),
         file_name=original_file_name,
         file_size=file_size,
@@ -396,9 +410,10 @@ async def create_material(
         favorites_count=0,
     )
     material.mime_type = mime_type
-    material.status = pending_status
+    material.status = initial_status
 
     db.add(material)
+    record_event(db, "material_upload", user_id=current_user.id)
 
     try:
         db.commit()
@@ -473,12 +488,12 @@ def remove_material_from_favorites(
     )
 
 
-@router.post("/{material_id}/like")
+@router.post("/{material_id}/like", response_model=LikeToggleResponse)
 def like_material(
     material_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> LikeToggleResponse:
     material = get_material_or_404(db, material_id)
 
     already_liked = db.scalar(
@@ -495,6 +510,17 @@ def like_material(
 
     db.add(Like(user_id=current_user.id, material_id=material_id))
     material.likes_count += 1
+    record_event(db, "material_like", user_id=current_user.id, entity_id=material_id)
+
+    existing_favorite = db.scalar(
+        select(Favorite).where(
+            Favorite.user_id == current_user.id,
+            Favorite.material_id == material_id,
+        )
+    )
+    if existing_favorite is None:
+        db.add(Favorite(user_id=current_user.id, material_id=material_id))
+        material.favorites_count += 1
 
     try:
         db.commit()
@@ -505,15 +531,20 @@ def like_material(
             detail="Failed to like",
         ) from exc
 
-    return {"likes_count": material.likes_count, "is_liked": True}
+    return LikeToggleResponse(
+        likes_count=material.likes_count,
+        is_liked=True,
+        is_favorite=True,
+        favorites_count=material.favorites_count,
+    )
 
 
-@router.delete("/{material_id}/like")
+@router.delete("/{material_id}/like", response_model=LikeToggleResponse)
 def unlike_material(
     material_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> LikeToggleResponse:
     material = get_material_or_404(db, material_id)
 
     like = db.scalar(
@@ -531,6 +562,16 @@ def unlike_material(
     db.delete(like)
     material.likes_count = max(0, material.likes_count - 1)
 
+    existing_favorite = db.scalar(
+        select(Favorite).where(
+            Favorite.user_id == current_user.id,
+            Favorite.material_id == material_id,
+        )
+    )
+    if existing_favorite is not None:
+        db.delete(existing_favorite)
+        material.favorites_count = max(0, material.favorites_count - 1)
+
     try:
         db.commit()
     except SQLAlchemyError as exc:
@@ -540,7 +581,12 @@ def unlike_material(
             detail="Failed to unlike",
         ) from exc
 
-    return {"likes_count": material.likes_count, "is_liked": False}
+    return LikeToggleResponse(
+        likes_count=material.likes_count,
+        is_liked=False,
+        is_favorite=False,
+        favorites_count=material.favorites_count,
+    )
 
 
 @router.post("/{material_id}/rating")
@@ -642,6 +688,7 @@ def download_material(
         )
 
     material.downloads_count += 1
+    record_event(db, "material_download", user_id=current_user.id if current_user else None, entity_id=material_id)
     db.commit()
 
     return FileResponse(
@@ -705,6 +752,7 @@ def get_material_detail(
     assert_material_is_visible(material, current_user)
 
     material.views_count += 1
+    record_event(db, "material_view", user_id=current_user.id if current_user else None, entity_id=material_id)
     db.commit()
     db.refresh(material)
 
@@ -755,6 +803,14 @@ def update_material(
     if data.program_id is not None:
         require_entity(db, Program, data.program_id, "Program not found")
         material.program_id = data.program_id
+
+    if data.is_editorial is not None:
+        if not is_privileged_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admin can change editorial flag",
+            )
+        material.is_editorial = data.is_editorial
 
     try:
         db.commit()

@@ -16,7 +16,11 @@ from app.models.comment import Comment
 from app.models.like import Like
 from app.models.favorite import Favorite
 from app.models.featured_item import FeaturedItem
+from app.models.moderation_log import ModerationLog
 from app.models.rating import Rating
+from app.models.user_event import UserEvent
+from app.models.report import Report
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "UserRoleEnum",
@@ -34,6 +38,10 @@ __all__ = [
     "Comment",
     "Like",
     "Favorite",
+    "ModerationLog",
     "Rating",
     "FeaturedItem",
+    "UserEvent",
+    "Report",
+    "AuditLog",
 ]

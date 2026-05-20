@@ -1,12 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  addMaterialToFavorites,
-  getMaterials,
-  removeMaterialFromFavorites,
-} from '../api/materialsApi';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getMaterials } from '../api/materialsApi';
 import MaterialCard from '../components/MaterialCard';
-import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
 
 const DEFAULT_FILTERS = {
@@ -49,6 +44,7 @@ function normalizeApiMaterial(m) {
     rating: null,
     favoritesCount: m.favorites_count || 0,
     isFavorite: Boolean(m.is_favorite),
+    isEditorial: Boolean(m.is_editorial),
     status: m.status || 'published',
   };
 }
@@ -63,22 +59,21 @@ function getPaginationPages(page, totalPages) {
 }
 
 const MaterialsPage = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated } = useAuth();
   const { subjects, materialTypes, courses, programs } = useReferenceData();
+  const searchInputRef = useRef(null);
   const [filters, setFilters] = useState(() => ({
     ...DEFAULT_FILTERS,
     search: searchParams.get('search') || '',
+    sort: searchParams.get('sort') === 'popular' ? 'popular' : DEFAULT_FILTERS.sort,
   }));
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('search') || '');
   const [page, setPage] = useState(1);
   const [materials, setMaterials] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pendingMaterialId, setPendingMaterialId] = useState(null);
 
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
@@ -93,6 +88,12 @@ const MaterialsPage = () => {
     }, 400);
     return () => clearTimeout(timer);
   }, [filters.search]);
+
+  useEffect(() => {
+    if (searchParams.get('focus') === 'search') {
+      searchInputRef.current?.focus();
+    }
+  }, [searchParams]);
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -149,38 +150,6 @@ const MaterialsPage = () => {
     };
   }, [debouncedSearch, filters.subject_id, filters.material_type_id, filters.course_id, filters.program_id, filters.sort, page]);
 
-  async function handleToggleFavorite(material) {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    setPendingMaterialId(material.id);
-    setError(null);
-
-    try {
-      const response = material.isFavorite
-        ? await removeMaterialFromFavorites(material.id)
-        : await addMaterialToFavorites(material.id);
-
-      setMaterials((currentMaterials) =>
-        currentMaterials.map((item) =>
-          item.id === material.id
-            ? {
-                ...item,
-                isFavorite: response.is_favorite,
-                favoritesCount: response.favorites_count,
-              }
-            : item
-        )
-      );
-    } catch (requestError) {
-      setError(requestError);
-    } finally {
-      setPendingMaterialId(null);
-    }
-  }
-
   return (
     <section className="page-shell">
       <div className="page-hero page-hero--compact">
@@ -233,6 +202,7 @@ const MaterialsPage = () => {
             <label className="catalog-search" aria-label="Поиск по каталогу">
               <span>⌕</span>
               <input
+                ref={searchInputRef}
                 type="search"
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
@@ -333,8 +303,6 @@ const MaterialsPage = () => {
                   <MaterialCard
                     key={material.id}
                     material={material}
-                    onToggleFavorite={handleToggleFavorite}
-                    isFavoritePending={pendingMaterialId === material.id}
                   />
                 ))}
               </div>

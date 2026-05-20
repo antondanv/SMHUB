@@ -1,6 +1,11 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
+import AdminAuditPage from './pages/AdminAuditPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminFeaturedPage from './pages/AdminFeaturedPage';
+import AdminReferencesPage from './pages/AdminReferencesPage';
+import AdminReportsPage from './pages/AdminReportsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 import FavoritesPage from './pages/FavoritesPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -24,6 +29,11 @@ function App() {
           <Route path="materials/create" element={<MaterialCreatePage />} />
           <Route path="favorites" element={<FavoritesPage />} />
           <Route path="my-materials" element={<MyMaterialsPage />} />
+          <Route path="admin" element={<AdminDashboardPage />} />
+          <Route path="admin/users" element={<AdminUsersPage />} />
+          <Route path="admin/references" element={<AdminReferencesPage />} />
+          <Route path="admin/reports" element={<AdminReportsPage />} />
+          <Route path="admin/audit" element={<AdminAuditPage />} />
           <Route path="moderation" element={<ModerationPage />} />
           <Route path="admin/featured" element={<AdminFeaturedPage />} />
           <Route path="login" element={<LoginPage />} />

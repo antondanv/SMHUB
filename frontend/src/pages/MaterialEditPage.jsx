@@ -34,8 +34,7 @@ const MaterialEditPage = () => {
         const canEdit =
           user &&
           (user.id === material.author_id ||
-            user.role === 'admin' ||
-            user.role === 'moderator');
+            user.role === 'admin');
 
         if (!canEdit) {
           navigate(`/materials/${id}`, { replace: true });
