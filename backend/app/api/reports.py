@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +21,7 @@ from app.models.enums import MaterialStatus as MaterialStatusEnum
 from app.models.material import Material
 from app.models.report import Report
 from app.models.user import User
+from app.services import audit_log
 
 
 router = APIRouter(tags=["reports"])
@@ -177,6 +178,7 @@ def get_open_reports_count(
 def update_report(
     report_id: int,
     data: ReportUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -187,6 +189,7 @@ def update_report(
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found")
 
+    before_status = report.status
     report.status = data.status
     report.resolved_by = current_user.id
     report.resolved_at = datetime.now(timezone.utc)
@@ -201,6 +204,21 @@ def update_report(
         comment = db.get(Comment, report.target_id)
         if comment is not None:
             db.delete(comment)
+
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action=f"report.{data.status}",
+        target_type="report",
+        target_id=report.id,
+        payload={
+            "before": {"status": before_status},
+            "after": {"status": data.status},
+            "follow_up": data.action,
+            "target": {"type": report.target_type, "id": report.target_id},
+        },
+        request=request,
+    )
 
     db.commit()
     db.refresh(report)

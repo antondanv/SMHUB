@@ -130,6 +130,11 @@ const MainLayout = () => {
                           )}
                         </NavLink>
                       </li>
+                      <li>
+                        <NavLink to="/admin/audit" className={getNavLinkClassName}>
+                          Аудит
+                        </NavLink>
+                      </li>
                     </>
                   ) : null}
                 </>

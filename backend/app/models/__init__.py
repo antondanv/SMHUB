@@ -19,6 +19,7 @@ from app.models.moderation_log import ModerationLog
 from app.models.rating import Rating
 from app.models.user_event import UserEvent
 from app.models.report import Report
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "UserRoleEnum",
@@ -40,4 +41,5 @@ __all__ = [
     "Rating",
     "UserEvent",
     "Report",
+    "AuditLog",
 ]
