@@ -11,6 +11,7 @@ class MaterialUpdateRequest(BaseModel):
     material_type_id: Optional[int] = None
     course_id: Optional[int] = None
     program_id: Optional[int] = None
+    is_editorial: Optional[bool] = None
 
 
 class MaterialCreateResponse(BaseModel):
@@ -82,6 +83,7 @@ class MaterialSummaryResponse(BaseModel):
     published_at: datetime | None
     created_at: datetime
     updated_at: datetime | None
+    is_editorial: bool = False
     is_favorite: bool = False
     is_liked: bool = False
     avg_rating: float | None = None

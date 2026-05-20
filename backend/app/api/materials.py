@@ -319,6 +319,7 @@ async def create_material(
     material_type_id: int = Form(...),
     course_id: int = Form(...),
     program_id: int = Form(...),
+    is_editorial: bool = Form(False),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -351,8 +352,18 @@ async def create_material(
     require_entity(db, Course, course_id, "Course not found")
     require_entity(db, Program, program_id, "Program not found")
 
+    if is_editorial and not is_privileged_user(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can publish editorial materials",
+        )
+
     mime_type = resolve_mime_type(db, original_file_name, file.content_type)
-    pending_status = get_status_or_500(db, MaterialStatusEnum.PENDING)
+
+    if is_editorial:
+        initial_status = get_status_or_500(db, MaterialStatusEnum.PUBLISHED)
+    else:
+        initial_status = get_status_or_500(db, MaterialStatusEnum.PENDING)
 
     file_bytes = await file.read()
     file_size = len(file_bytes)
@@ -385,7 +396,8 @@ async def create_material(
         course_id=course_id,
         program_id=program_id,
         mime_type_id=mime_type.id,
-        status_id=pending_status.id,
+        status_id=initial_status.id,
+        is_editorial=is_editorial,
         file_url=str(Path("uploads") / "materials" / stored_file_name),
         file_name=original_file_name,
         file_size=file_size,
@@ -396,7 +408,7 @@ async def create_material(
         favorites_count=0,
     )
     material.mime_type = mime_type
-    material.status = pending_status
+    material.status = initial_status
 
     db.add(material)
 
@@ -755,6 +767,14 @@ def update_material(
     if data.program_id is not None:
         require_entity(db, Program, data.program_id, "Program not found")
         material.program_id = data.program_id
+
+    if data.is_editorial is not None:
+        if not is_privileged_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admin can change editorial flag",
+            )
+        material.is_editorial = data.is_editorial
 
     try:
         db.commit()
