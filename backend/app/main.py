@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.admin import router as admin_router
+from app.api.audit import router as audit_router
 from app.api.auth import router as auth_router
 from app.api.comments import router as comments_router
 from app.api.courses import router as courses_router
@@ -31,6 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(admin_router)
+app.include_router(audit_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(courses_router)
