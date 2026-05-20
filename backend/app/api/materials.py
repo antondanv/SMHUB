@@ -496,6 +496,7 @@ def like_material(
 ) -> LikeToggleResponse:
     material = get_material_or_404(db, material_id)
 
+    assert_material_is_visible(material, current_user)
     already_liked = db.scalar(
         select(Like).where(
             Like.material_id == material_id,
@@ -547,6 +548,7 @@ def unlike_material(
 ) -> LikeToggleResponse:
     material = get_material_or_404(db, material_id)
 
+    assert_material_is_visible(material, current_user)
     like = db.scalar(
         select(Like).where(
             Like.material_id == material_id,
@@ -598,6 +600,7 @@ def rate_material(
 ):
     material = get_material_or_404(db, material_id)
 
+    assert_material_is_visible(material, current_user)
     existing = db.scalar(
         select(Rating).where(
             Rating.material_id == material_id,
@@ -639,6 +642,7 @@ def update_rating(
 ):
     material = get_material_or_404(db, material_id)
 
+    assert_material_is_visible(material, current_user)
     existing = db.scalar(
         select(Rating).where(
             Rating.material_id == material_id,
