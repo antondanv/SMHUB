@@ -1,12 +1,41 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 
 const MainLayout = () => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const canModerate = user?.role === 'moderator' || user?.role === 'admin';
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
+  const isOnMaterials = location.pathname === '/materials';
+
+  const [headerQuery, setHeaderQuery] = useState('');
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    setHeaderQuery(isOnMaterials ? (searchParams.get('search') || '') : '');
+  }, [isOnMaterials, searchParams]);
+
+  useEffect(() => {
+    function onKeyDown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  function handleSearchSubmit(e) {
+    e.preventDefault();
+    const trimmed = headerQuery.trim();
+    navigate(trimmed ? `/materials?search=${encodeURIComponent(trimmed)}` : '/materials');
+    if (!isOnMaterials) setHeaderQuery('');
+  }
 
   function getNavLinkClassName({ isActive }) {
     return `site-nav__link${isActive ? ' is-active' : ''}`;
@@ -89,11 +118,22 @@ const MainLayout = () => {
                 Загрузить
               </Link>
             ) : null}
-            <label className="header-search" aria-label="Поиск по материалам">
+            <form
+              className="header-search"
+              onSubmit={handleSearchSubmit}
+              role="search"
+              aria-label="Поиск по материалам"
+            >
               <span className="header-search__icon">⌕</span>
-              <input type="search" placeholder="Поиск по материалам..." />
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={headerQuery}
+                onChange={(e) => setHeaderQuery(e.target.value)}
+                placeholder="Поиск по материалам..."
+              />
               <span className="header-search__hint">⌘K</span>
-            </label>
+            </form>
             {!isAuthenticated ? (
               <Link className="button button--header" to={guestAction.to}>
                 {guestAction.label}
