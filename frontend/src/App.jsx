@@ -3,6 +3,7 @@ import MainLayout from './layouts/MainLayout';
 import AdminAuditPage from './pages/AdminAuditPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminFeaturedPage from './pages/AdminFeaturedPage';
+import AdminRegisterPage from './pages/AdminRegisterPage';
 import AdminReferencesPage from './pages/AdminReferencesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -30,6 +31,7 @@ function App() {
           <Route path="favorites" element={<FavoritesPage />} />
           <Route path="my-materials" element={<MyMaterialsPage />} />
           <Route path="admin" element={<AdminDashboardPage />} />
+          <Route path="admin/register" element={<AdminRegisterPage />} />
           <Route path="admin/users" element={<AdminUsersPage />} />
           <Route path="admin/references" element={<AdminReferencesPage />} />
           <Route path="admin/reports" element={<AdminReportsPage />} />

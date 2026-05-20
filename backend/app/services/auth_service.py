@@ -29,13 +29,13 @@ def get_user_by_username(db: Session, username: str) -> User | None:
     )
 
 
-def get_student_role(db: Session) -> Role:
+def get_role(db: Session, name: str) -> Role:
     role = db.scalar(
-        select(Role).where(Role.name == DEFAULT_USER_ROLE)
+        select(Role).where(Role.name == name)
     )
     
     if role is None:
-        raise ValueError("Student role not found")
+        raise ValueError(f"Role '{name}' not found")
 
     return role
 
@@ -63,7 +63,12 @@ def validate_program_id(db: Session, program_id: int | None) -> None:
     if program_exists is None:
         raise ValueError("Program not found")
 
-def create_user(db: Session, user_data: UserRegister) -> User:
+
+def create_user_with_role(
+    db: Session,
+    user_data: UserRegister,
+    role_name: str,
+) -> User:
     if get_user_by_email(db, user_data.email) is not None:
         raise ValueError("Email already exists")
     
@@ -73,7 +78,7 @@ def create_user(db: Session, user_data: UserRegister) -> User:
     validate_course_id(db, user_data.course_id)
     validate_program_id(db, user_data.program_id)
     
-    student_role = get_student_role(db)
+    role = get_role(db, role_name)
     
     user = User(
         email=user_data.email.strip().lower(),
@@ -85,7 +90,7 @@ def create_user(db: Session, user_data: UserRegister) -> User:
         first_name=user_data.first_name.strip(),
         middle_name=user_data.middle_name.strip() if user_data.middle_name else None,
         
-        role_id=student_role.id,
+        role_id=role.id,
         is_active=True,
         
         course_id=user_data.course_id,
@@ -104,6 +109,10 @@ def create_user(db: Session, user_data: UserRegister) -> User:
     db.refresh(user)
     
     return user
+
+
+def create_user(db: Session, user_data: UserRegister) -> User:
+    return create_user_with_role(db, user_data, DEFAULT_USER_ROLE)
 
 def authenticate_user(db: Session, login_data: UserLogin) -> User | None:
     user = get_user_by_email(db, login_data.email)

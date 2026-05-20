@@ -8,6 +8,12 @@ export async function registerUser(userData) {
   return response.data;
 }
 
+export async function registerAdmin(userData) {
+  const response = await apiClient.post('/auth/admin/register', userData);
+
+  return response.data;
+}
+
 export async function loginUser(loginData) {
   const response = await apiClient.post('/auth/login', loginData);
 

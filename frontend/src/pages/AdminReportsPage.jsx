@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { getReports, resolveReport } from '../api/reportsApi';
 import { useAuth } from '../context/useAuth';
+import { isAdminUser } from '../utils/auth';
 
 const REASON_LABELS = {
   spam: 'Спам',
@@ -27,7 +28,7 @@ const AdminReportsPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = isAdminUser(user);
 
   useEffect(() => {
     if (!isAdmin) return;
