@@ -288,21 +288,21 @@ const HomePage = () => {
           <p className="hero-copy">Короткий, понятный сценарий для поиска, проверки и сохранения материалов.</p>
         </div>
         <div className="steps-grid">
-          <article className="step-card">
+          <Link className="step-card" to="/materials?focus=search">
             <div className="step-card__icon">⌕</div>
             <h3>1. Найдите</h3>
             <p>Ищите по предмету, курсу, типу материала и ключевым словам.</p>
-          </article>
-          <article className="step-card step-card--active">
+          </Link>
+          <Link className="step-card step-card--active" to="/materials?sort=popular">
             <div className="step-card__icon">✓</div>
             <h3>2. Проверьте</h3>
             <p>Ориентируйтесь на рейтинг, сохранения и статус модерации.</p>
-          </article>
-          <article className="step-card">
+          </Link>
+          <Link className="step-card" to={isAuthenticated ? '/materials/create' : '/login'}>
             <div className="step-card__icon">＋</div>
             <h3>3. Сохраните или загрузите</h3>
             <p>Добавляйте материалы в избранное или делитесь своими файлами.</p>
-          </article>
+          </Link>
         </div>
       </section>
     </div>
