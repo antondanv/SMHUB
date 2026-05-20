@@ -330,6 +330,7 @@ const MaterialDetailPage = () => {
               <div>
                 <div className="detail-inline-meta">
                   <StatusBadge status={material.status} />
+                  {material.is_editorial && <span className="editorial-badge">От редакции</span>}
                   <span>{material.views_count} просмотров</span>
                 </div>
                 <h1>{material.title}</h1>

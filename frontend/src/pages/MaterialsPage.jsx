@@ -44,6 +44,7 @@ function normalizeApiMaterial(m) {
     rating: null,
     favoritesCount: m.favorites_count || 0,
     isFavorite: Boolean(m.is_favorite),
+    isEditorial: Boolean(m.is_editorial),
     status: m.status || 'published',
   };
 }

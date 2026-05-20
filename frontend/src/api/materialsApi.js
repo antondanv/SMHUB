@@ -68,6 +68,9 @@ export async function createMaterial(materialData) {
   formData.append('course_id', String(materialData.course_id));
   formData.append('program_id', String(materialData.program_id));
   formData.append('file', materialData.file);
+  if (materialData.is_editorial) {
+    formData.append('is_editorial', 'true');
+  }
 
   const response = await apiClient.post('/materials', formData, {
     headers: {
