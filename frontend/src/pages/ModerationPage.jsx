@@ -24,7 +24,7 @@ const ModerationPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const hasModerationAccess = user?.role_name === 'moderator' || user?.role_name === 'admin';
+  const hasModerationAccess = user?.role_name === 'admin';
   const activeMaterial = materials.find((material) => material.id === activeMaterialId) || null;
 
   useEffect(() => {
