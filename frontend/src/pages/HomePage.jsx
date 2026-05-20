@@ -5,6 +5,7 @@ import {
   getMaterials,
   removeMaterialFromFavorites,
 } from '../api/materialsApi';
+import { getFeatured } from '../api/featuredApi';
 import MaterialCard from '../components/MaterialCard';
 import heroImage from '../assets/hero.png';
 import { useAuth } from '../context/useAuth';
@@ -67,6 +68,30 @@ function useMaterialsSection(params) {
   return { items, setItems, isLoading };
 }
 
+function useFeaturedSection(section) {
+  const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+    getFeatured(section)
+      .then((data) => {
+        if (isActive) setItems((data || []).map(normalizeApiMaterial));
+      })
+      .catch(() => {
+        if (isActive) setItems([]);
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [section]);
+
+  return { items, setItems, isLoading };
+}
+
 const HomePage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -81,6 +106,13 @@ const HomePage = () => {
     setItems: setPopularMaterials,
     isLoading: popularLoading,
   } = useMaterialsSection({ sort: 'popular', per_page: 3 });
+  const { items: heroFeatured, setItems: setHeroFeatured } = useFeaturedSection('hero');
+  const { items: recommendedFeatured, setItems: setRecommendedFeatured } =
+    useFeaturedSection('recommended');
+  const { items: editorialFeatured, setItems: setEditorialFeatured } =
+    useFeaturedSection('editorial');
+  const { items: seasonalFeatured, setItems: setSeasonalFeatured } =
+    useFeaturedSection('seasonal');
   const [pendingMaterialId, setPendingMaterialId] = useState(null);
 
   const featuredSubjects = subjects.slice(0, 8);
@@ -111,6 +143,10 @@ const HomePage = () => {
 
       setLatestMaterials((items) => updateItems(items));
       setPopularMaterials((items) => updateItems(items));
+      setHeroFeatured((items) => updateItems(items));
+      setRecommendedFeatured((items) => updateItems(items));
+      setEditorialFeatured((items) => updateItems(items));
+      setSeasonalFeatured((items) => updateItems(items));
     } finally {
       setPendingMaterialId(null);
     }
@@ -201,6 +237,48 @@ const HomePage = () => {
         </section>
       )}
 
+      {heroFeatured.length > 0 && (
+        <section className="section-block">
+          <div className="section-heading section-heading--row">
+            <div>
+              <p className="caps-label">Главное сейчас</p>
+              <h2>Подборка от команды SMHUB.</h2>
+            </div>
+          </div>
+          <div className="material-grid">
+            {heroFeatured.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onToggleFavorite={handleToggleFavorite}
+                isFavoritePending={pendingMaterialId === material.id}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {recommendedFeatured.length > 0 && (
+        <section className="section-block">
+          <div className="section-heading section-heading--row">
+            <div>
+              <p className="caps-label">Рекомендуем</p>
+              <h2>Материалы, которые стоит посмотреть в первую очередь.</h2>
+            </div>
+          </div>
+          <div className="material-grid">
+            {recommendedFeatured.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onToggleFavorite={handleToggleFavorite}
+                isFavoritePending={pendingMaterialId === material.id}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {featuredSubjects.length > 0 && (
         <section className="section-block">
           <div className="section-heading section-heading--row">
@@ -281,6 +359,48 @@ const HomePage = () => {
           <div className="catalog-state catalog-state--empty"><p>Материалов пока нет.</p></div>
         )}
       </section>
+
+      {editorialFeatured.length > 0 && (
+        <section className="section-block">
+          <div className="section-heading section-heading--row">
+            <div>
+              <p className="caps-label">От редакции</p>
+              <h2>Подборка от модераторов сообщества.</h2>
+            </div>
+          </div>
+          <div className="material-grid">
+            {editorialFeatured.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onToggleFavorite={handleToggleFavorite}
+                isFavoritePending={pendingMaterialId === material.id}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {seasonalFeatured.length > 0 && (
+        <section className="section-block">
+          <div className="section-heading section-heading--row">
+            <div>
+              <p className="caps-label">Сезонное</p>
+              <h2>Актуальные материалы под текущий период обучения.</h2>
+            </div>
+          </div>
+          <div className="material-grid">
+            {seasonalFeatured.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onToggleFavorite={handleToggleFavorite}
+                isFavoritePending={pendingMaterialId === material.id}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="how-it-works">
         <div className="section-heading section-heading--center">

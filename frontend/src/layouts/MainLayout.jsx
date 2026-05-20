@@ -7,7 +7,12 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canModerate = user?.role === 'moderator' || user?.role === 'admin';
+  const canModerate =
+    user?.role === 'moderator' ||
+    user?.role === 'admin' ||
+    user?.role_name === 'moderator' ||
+    user?.role_name === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role_name === 'admin';
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
   const isOnMaterials = location.pathname === '/materials';
@@ -104,6 +109,13 @@ const MainLayout = () => {
                     <li>
                       <NavLink to="/moderation" className={getNavLinkClassName}>
                         Модерация
+                      </NavLink>
+                    </li>
+                  ) : null}
+                  {isAdmin ? (
+                    <li>
+                      <NavLink to="/admin/featured" className={getNavLinkClassName}>
+                        Витрина
                       </NavLink>
                     </li>
                   ) : null}
