@@ -110,12 +110,21 @@ const AdminDashboardPage = () => {
 
   useEffect(() => {
     if (!isAdmin) return;
-    setTsLoading(true);
-    setTsError(null);
-    getDashboardTimeseries(selectedMetric, selectedPeriod)
-      .then((d) => setTsData(d.data))
-      .catch(setTsError)
-      .finally(() => setTsLoading(false));
+
+    async function loadTimeseries() {
+      setTsLoading(true);
+      setTsError(null);
+      try {
+        const data = await getDashboardTimeseries(selectedMetric, selectedPeriod);
+        setTsData(data.data);
+      } catch (error) {
+        setTsError(error);
+      } finally {
+        setTsLoading(false);
+      }
+    }
+
+    loadTimeseries();
   }, [isAdmin, selectedMetric, selectedPeriod]);
 
   if (isAuthLoading) {

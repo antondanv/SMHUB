@@ -65,22 +65,29 @@ const AdminAuditPage = () => {
 
   useEffect(() => {
     if (!isAdmin) return;
-    setIsLoading(true);
-    setError('');
-    const params = { page, per_page: 50 };
-    if (actorId) params.actor_id = actorId;
-    if (action) params.action = action;
-    if (dateFrom) params.date_from = dateFrom;
-    if (dateTo) params.date_to = dateTo;
 
-    getAuditLog(params)
-      .then((data) => {
+    async function loadAuditLog() {
+      setIsLoading(true);
+      setError('');
+      const params = { page, per_page: 50 };
+      if (actorId) params.actor_id = actorId;
+      if (action) params.action = action;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+
+      try {
+        const data = await getAuditLog(params);
         setEntries(data.items);
         setTotal(data.total);
         setTotalPages(data.total_pages);
-      })
-      .catch(() => setError('Не удалось загрузить аудит-лог.'))
-      .finally(() => setIsLoading(false));
+      } catch {
+        setError('Не удалось загрузить аудит-лог.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadAuditLog();
   }, [isAdmin, actorId, action, dateFrom, dateTo, page]);
 
   if (!isAuthLoading && !isAuthenticated) {
