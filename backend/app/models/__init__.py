@@ -15,6 +15,7 @@ from app.models.material import Material
 from app.models.comment import Comment
 from app.models.like import Like
 from app.models.favorite import Favorite
+from app.models.moderation_log import ModerationLog
 from app.models.rating import Rating
 from app.models.user_event import UserEvent
 
@@ -34,6 +35,7 @@ __all__ = [
     "Comment",
     "Like",
     "Favorite",
+    "ModerationLog",
     "Rating",
     "UserEvent",
 ]

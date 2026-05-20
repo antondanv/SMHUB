@@ -178,3 +178,29 @@ class ModerationQueueResponse(BaseModel):
 
 class ModerationDecisionRequest(BaseModel):
     status: str
+    comment: Optional[str] = None
+
+
+class ModerationLogEntryResponse(BaseModel):
+    id: int
+    action: str
+    comment: Optional[str]
+    actor_username: Optional[str]
+    actor_full_name: Optional[str]
+    created_at: datetime
+
+
+class ModerationHistoryResponse(BaseModel):
+    material_id: int
+    entries: list[ModerationLogEntryResponse]
+
+
+class BulkModerationRequest(BaseModel):
+    ids: list[int]
+    action: str
+    comment: Optional[str] = None
+
+
+class BulkModerationResponse(BaseModel):
+    updated: int
+    skipped: int
