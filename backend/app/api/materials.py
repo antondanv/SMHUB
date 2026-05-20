@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import func, select
+from sqlalchemy import delete as sa_delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,7 @@ from app.schemas.material import LikeToggleResponse
 from app.core.config import BASE_DIR
 from app.db.database import get_db
 from app.models.course import Course
+from app.models.comment import Comment
 from app.models.enums import MaterialStatus as MaterialStatusEnum, UserRole
 from app.models.favorite import Favorite
 from app.models.like import Like
@@ -848,6 +849,10 @@ def delete_material(
     preview_sidecar_path = file_path.with_suffix(file_path.suffix + ".preview.json")
 
     try:
+        db.execute(sa_delete(Comment).where(Comment.material_id == material.id))
+        db.execute(sa_delete(Like).where(Like.material_id == material.id))
+        db.execute(sa_delete(Favorite).where(Favorite.material_id == material.id))
+        db.execute(sa_delete(Rating).where(Rating.material_id == material.id))
         db.delete(material)
         db.commit()
     except SQLAlchemyError as exc:
