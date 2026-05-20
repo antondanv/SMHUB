@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { getOpenReportsCount } from '../api/reportsApi';
 import { useAuth } from '../context/useAuth';
 
 const MainLayout = () => {
@@ -7,7 +8,17 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canModerate = user?.role === 'moderator' || user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
+  const canModerate = isAdmin;
+  const [openReports, setOpenReports] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setOpenReports(0);
+      return;
+    }
+    getOpenReportsCount().then(setOpenReports).catch(() => setOpenReports(0));
+  }, [isAdmin, location.pathname]);
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
   const isOnMaterials = location.pathname === '/materials';
@@ -101,11 +112,21 @@ const MainLayout = () => {
                     </NavLink>
                   </li>
                   {canModerate ? (
-                    <li>
-                      <NavLink to="/moderation" className={getNavLinkClassName}>
-                        Модерация
-                      </NavLink>
-                    </li>
+                    <>
+                      <li>
+                        <NavLink to="/moderation" className={getNavLinkClassName}>
+                          Модерация
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/admin/reports" className={getNavLinkClassName}>
+                          Жалобы
+                          {openReports > 0 && (
+                            <span className="nav-badge">{openReports}</span>
+                          )}
+                        </NavLink>
+                      </li>
+                    </>
                   ) : null}
                 </>
               ) : null}
