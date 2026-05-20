@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
+import AdminReportsPage from './pages/AdminReportsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -23,6 +24,7 @@ function App() {
           <Route path="materials/create" element={<MaterialCreatePage />} />
           <Route path="favorites" element={<FavoritesPage />} />
           <Route path="my-materials" element={<MyMaterialsPage />} />
+          <Route path="admin/reports" element={<AdminReportsPage />} />
           <Route path="moderation" element={<ModerationPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<LoginPage defaultMode="register" />} />
