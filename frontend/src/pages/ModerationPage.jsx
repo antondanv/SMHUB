@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import {
   bulkModerate,
+  getMaterialFileBlob,
   getModerationHistory,
   getModerationQueue,
   moderateMaterial,
@@ -46,9 +47,63 @@ function HistoryTimeline({ history }) {
 }
 
 function FilePreview({ material }) {
-  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-  const fileUrl = `${backendUrl}/materials/${material.id}/file`;
+  const [fileUrl, setFileUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const isPdf = material.mime_type === 'application/pdf' || material.file_name?.endsWith('.pdf');
+
+  useEffect(() => {
+    let isActive = true;
+    let objectUrl = '';
+
+    async function loadPreview() {
+      setIsLoading(true);
+      setFileUrl('');
+
+      try {
+        const { blob, contentType } = await getMaterialFileBlob(material.id);
+        objectUrl = window.URL.createObjectURL(
+          new Blob([blob], { type: contentType || material.mime_type })
+        );
+
+        if (isActive) {
+          setFileUrl(objectUrl);
+        }
+      } catch {
+        if (isActive) {
+          setFileUrl('');
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadPreview();
+
+    return () => {
+      isActive = false;
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [material.id, material.mime_type]);
+
+  if (isLoading) {
+    return (
+      <div className="mod-preview mod-preview--no-embed">
+        <p className="profile-muted">Загрузка предпросмотра...</p>
+      </div>
+    );
+  }
+
+  if (!fileUrl) {
+    return (
+      <div className="mod-preview mod-preview--no-embed">
+        <p className="profile-muted">Предпросмотр временно недоступен. Откройте файл отдельно.</p>
+      </div>
+    );
+  }
 
   if (isPdf) {
     return (
@@ -107,40 +162,56 @@ const ModerationPage = () => {
     if (!isAuthenticated || !hasModerationAccess) return;
 
     let isActive = true;
-    setIsPageLoading(true);
-    setError('');
-    setSelected(new Set());
 
-    const params = { status: statusFilter };
-    if (subjectFilter) params.subject_id = subjectFilter;
-    if (dateFrom) params.date_from = dateFrom;
-    if (dateTo) params.date_to = dateTo;
+    async function loadModerationQueue() {
+      setIsPageLoading(true);
+      setError('');
+      setSelected(new Set());
 
-    getModerationQueue(params)
-      .then((data) => {
+      const params = { status: statusFilter };
+      if (subjectFilter) params.subject_id = subjectFilter;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+
+      try {
+        const data = await getModerationQueue(params);
         if (!isActive) return;
         setMaterials(data.items);
         setTotal(data.total);
         setActiveMaterialId(data.items[0]?.id || null);
-      })
-      .catch(() => {
+      } catch {
         if (isActive) setError('Не удалось загрузить очередь модерации.');
-      })
-      .finally(() => {
+      } finally {
         if (isActive) setIsPageLoading(false);
-      });
+      }
+    }
+
+    loadModerationQueue();
 
     return () => { isActive = false; };
   }, [isAuthenticated, hasModerationAccess, statusFilter, subjectFilter, dateFrom, dateTo]);
 
   useEffect(() => {
-    if (!activeMaterialId) { setHistory(null); return; }
-    setHistoryLoading(true);
-    getModerationHistory(activeMaterialId)
-      .then((data) => setHistory(data.entries))
-      .catch(() => setHistory([]))
-      .finally(() => setHistoryLoading(false));
-    setRejectComment('');
+    if (!activeMaterialId) {
+      function resetHistoryState() {
+        setHistory(null);
+        setRejectComment('');
+      }
+
+      resetHistoryState();
+      return;
+    }
+
+    function loadHistory() {
+      setHistoryLoading(true);
+      getModerationHistory(activeMaterialId)
+        .then((data) => setHistory(data.entries))
+        .catch(() => setHistory([]))
+        .finally(() => setHistoryLoading(false));
+      setRejectComment('');
+    }
+
+    loadHistory();
   }, [activeMaterialId]);
 
   async function handleAction(nextStatus) {

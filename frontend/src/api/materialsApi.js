@@ -44,6 +44,17 @@ export function getMaterialFileUrl(id) {
   return joinApiPath(`/materials/${id}/file`);
 }
 
+export async function getMaterialFileBlob(materialId) {
+  const response = await apiClient.get(`/materials/${materialId}/file`, {
+    responseType: 'blob',
+  });
+
+  return {
+    blob: response.data,
+    contentType: response.headers['content-type'],
+  };
+}
+
 export async function getMaterialPreview(id) {
   const response = await apiClient.get(`/materials/${id}/preview`);
   return response.data;
