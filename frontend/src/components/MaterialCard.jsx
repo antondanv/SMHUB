@@ -38,6 +38,7 @@ function MaterialCard({
       <div className="material-card__body">
         <div className="material-card__meta-row">
           <span className="caps-label">{material.subject}</span>
+          {material.isEditorial && <span className="editorial-badge">От редакции</span>}
           {showStatus ? <StatusBadge status={material.status} /> : null}
         </div>
 
