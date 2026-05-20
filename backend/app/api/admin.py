@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy import cast, func, select, Date
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.auth import get_current_user
 from app.api.materials_common import full_name_for_user, is_privileged_user
 from app.db.database import get_db
+from app.services import audit_log
 from app.models.course import Course
 from app.models.enums import MaterialStatus as MaterialStatusEnum
 from app.models.material import Material
@@ -364,6 +365,7 @@ def get_user_detail(
 def update_user(
     user_id: int,
     data: UserUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -372,6 +374,9 @@ def update_user(
     user = db.scalar(select(User).options(joinedload(User.role)).where(User.id == user_id))
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    before_role = user.role.name if user.role else None
+    before_active = user.is_active
 
     if data.role is not None:
         if user_id == current_user.id and data.role != (current_user.role.name if current_user.role else None):
@@ -392,6 +397,30 @@ def update_user(
                 detail="Cannot deactivate your own account",
             )
         user.is_active = data.is_active
+
+    after_role = user.role.name if user.role else None
+    after_active = user.is_active
+
+    if before_role != after_role:
+        audit_log.record(
+            db,
+            actor_id=current_user.id,
+            action="user.role.change",
+            target_type="user",
+            target_id=user.id,
+            payload={"before": before_role, "after": after_role, "username": user.username},
+            request=request,
+        )
+    if before_active != after_active:
+        audit_log.record(
+            db,
+            actor_id=current_user.id,
+            action="user.active.change",
+            target_type="user",
+            target_id=user.id,
+            payload={"before": before_active, "after": after_active, "username": user.username},
+            request=request,
+        )
 
     db.commit()
     db.refresh(user)
@@ -423,6 +452,7 @@ class SubjectUpdateRequest(BaseModel):
 @router.post("/subjects", status_code=201)
 def create_subject(
     data: SubjectCreateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -430,10 +460,20 @@ def create_subject(
     subject = Subject(name=data.name.strip(), description=data.description)
     db.add(subject)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Subject already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.subject.create",
+        target_type="subject",
+        target_id=subject.id,
+        payload={"after": {"name": subject.name, "description": subject.description}},
+        request=request,
+    )
+    db.commit()
     db.refresh(subject)
     return {"id": subject.id, "name": subject.name, "description": subject.description}
 
@@ -442,6 +482,7 @@ def create_subject(
 def update_subject(
     subject_id: int,
     data: SubjectUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -449,15 +490,26 @@ def update_subject(
     subject = db.get(Subject, subject_id)
     if subject is None:
         raise HTTPException(status_code=404, detail="Subject not found")
+    before = {"name": subject.name, "description": subject.description}
     if data.name is not None:
         subject.name = data.name.strip()
     if data.description is not None:
         subject.description = data.description
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Subject name already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.subject.update",
+        target_type="subject",
+        target_id=subject.id,
+        payload={"before": before, "after": {"name": subject.name, "description": subject.description}},
+        request=request,
+    )
+    db.commit()
     db.refresh(subject)
     return {"id": subject.id, "name": subject.name, "description": subject.description}
 
@@ -465,6 +517,7 @@ def update_subject(
 @router.delete("/subjects/{subject_id}", status_code=204)
 def delete_subject(
     subject_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -479,6 +532,15 @@ def delete_subject(
             detail=f"Cannot delete: {count} material(s) reference this subject",
         )
     subject.is_active = False
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.subject.delete",
+        target_type="subject",
+        target_id=subject.id,
+        payload={"before": {"name": subject.name, "description": subject.description}},
+        request=request,
+    )
     db.commit()
 
 
@@ -495,6 +557,7 @@ class MaterialTypeUpdateRequest(BaseModel):
 @router.post("/material_types", status_code=201)
 def create_material_type(
     data: MaterialTypeCreateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -502,10 +565,20 @@ def create_material_type(
     mt = MaterialType(name=data.name.strip())
     db.add(mt)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Material type already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.material_type.create",
+        target_type="material_type",
+        target_id=mt.id,
+        payload={"after": {"name": mt.name}},
+        request=request,
+    )
+    db.commit()
     db.refresh(mt)
     return {"id": mt.id, "name": mt.name}
 
@@ -514,6 +587,7 @@ def create_material_type(
 def update_material_type(
     mt_id: int,
     data: MaterialTypeUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -521,13 +595,24 @@ def update_material_type(
     mt = db.get(MaterialType, mt_id)
     if mt is None:
         raise HTTPException(status_code=404, detail="Material type not found")
+    before = {"name": mt.name}
     if data.name is not None:
         mt.name = data.name.strip()
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Material type name already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.material_type.update",
+        target_type="material_type",
+        target_id=mt.id,
+        payload={"before": before, "after": {"name": mt.name}},
+        request=request,
+    )
+    db.commit()
     db.refresh(mt)
     return {"id": mt.id, "name": mt.name}
 
@@ -535,6 +620,7 @@ def update_material_type(
 @router.delete("/material_types/{mt_id}", status_code=204)
 def delete_material_type(
     mt_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -548,6 +634,15 @@ def delete_material_type(
             status_code=409,
             detail=f"Cannot delete: {count} material(s) reference this type",
         )
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.material_type.delete",
+        target_type="material_type",
+        target_id=mt.id,
+        payload={"before": {"name": mt.name}},
+        request=request,
+    )
     db.delete(mt)
     db.commit()
 
@@ -567,6 +662,7 @@ class CourseUpdateRequest(BaseModel):
 @router.post("/courses", status_code=201)
 def create_course(
     data: CourseCreateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -574,10 +670,20 @@ def create_course(
     course = Course(name=data.name.strip(), number=data.number)
     db.add(course)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Course already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.course.create",
+        target_type="course",
+        target_id=course.id,
+        payload={"after": {"name": course.name, "number": course.number}},
+        request=request,
+    )
+    db.commit()
     db.refresh(course)
     return {"id": course.id, "name": course.name, "number": course.number}
 
@@ -586,6 +692,7 @@ def create_course(
 def update_course(
     course_id: int,
     data: CourseUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -593,15 +700,26 @@ def update_course(
     course = db.get(Course, course_id)
     if course is None:
         raise HTTPException(status_code=404, detail="Course not found")
+    before = {"name": course.name, "number": course.number}
     if data.name is not None:
         course.name = data.name.strip()
     if data.number is not None:
         course.number = data.number
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Course already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.course.update",
+        target_type="course",
+        target_id=course.id,
+        payload={"before": before, "after": {"name": course.name, "number": course.number}},
+        request=request,
+    )
+    db.commit()
     db.refresh(course)
     return {"id": course.id, "name": course.name, "number": course.number}
 
@@ -609,6 +727,7 @@ def update_course(
 @router.delete("/courses/{course_id}", status_code=204)
 def delete_course(
     course_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -622,6 +741,15 @@ def delete_course(
             status_code=409,
             detail=f"Cannot delete: {count} material(s) reference this course",
         )
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.course.delete",
+        target_type="course",
+        target_id=course.id,
+        payload={"before": {"name": course.name, "number": course.number}},
+        request=request,
+    )
     db.delete(course)
     db.commit()
 
@@ -643,6 +771,7 @@ class ProgramUpdateRequest(BaseModel):
 @router.post("/programs", status_code=201)
 def create_program(
     data: ProgramCreateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -650,10 +779,20 @@ def create_program(
     program = Program(name=data.name.strip(), code=data.code.strip(), description=data.description)
     db.add(program)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Program already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.program.create",
+        target_type="program",
+        target_id=program.id,
+        payload={"after": {"name": program.name, "code": program.code, "description": program.description}},
+        request=request,
+    )
+    db.commit()
     db.refresh(program)
     return {"id": program.id, "name": program.name, "code": program.code}
 
@@ -662,6 +801,7 @@ def create_program(
 def update_program(
     program_id: int,
     data: ProgramUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -669,6 +809,7 @@ def update_program(
     program = db.get(Program, program_id)
     if program is None:
         raise HTTPException(status_code=404, detail="Program not found")
+    before = {"name": program.name, "code": program.code, "description": program.description}
     if data.name is not None:
         program.name = data.name.strip()
     if data.code is not None:
@@ -676,10 +817,20 @@ def update_program(
     if data.description is not None:
         program.description = data.description
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Program already exists")
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.program.update",
+        target_type="program",
+        target_id=program.id,
+        payload={"before": before, "after": {"name": program.name, "code": program.code, "description": program.description}},
+        request=request,
+    )
+    db.commit()
     db.refresh(program)
     return {"id": program.id, "name": program.name, "code": program.code}
 
@@ -687,6 +838,7 @@ def update_program(
 @router.delete("/programs/{program_id}", status_code=204)
 def delete_program(
     program_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -700,5 +852,14 @@ def delete_program(
             status_code=409,
             detail=f"Cannot delete: {count} material(s) reference this program",
         )
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="reference.program.delete",
+        target_type="program",
+        target_id=program.id,
+        payload={"before": {"name": program.name, "code": program.code, "description": program.description}},
+        request=request,
+    )
     db.delete(program)
     db.commit()
