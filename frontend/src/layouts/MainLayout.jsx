@@ -101,11 +101,18 @@ const MainLayout = () => {
                     </NavLink>
                   </li>
                   {canModerate ? (
-                    <li>
-                      <NavLink to="/moderation" className={getNavLinkClassName}>
-                        Модерация
-                      </NavLink>
-                    </li>
+                    <>
+                      <li>
+                        <NavLink to="/moderation" className={getNavLinkClassName}>
+                          Модерация
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/admin" className={getNavLinkClassName}>
+                          Админка
+                        </NavLink>
+                      </li>
+                    </>
                   ) : null}
                 </>
               ) : null}
