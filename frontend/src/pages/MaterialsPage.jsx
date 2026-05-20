@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   addMaterialToFavorites,
   getMaterials,
@@ -64,9 +64,13 @@ function getPaginationPages(page, totalPages) {
 
 const MaterialsPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { subjects, materialTypes, courses, programs } = useReferenceData();
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState(() => ({
+    ...DEFAULT_FILTERS,
+    search: searchParams.get('search') || '',
+  }));
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [materials, setMaterials] = useState([]);
@@ -75,6 +79,12 @@ const MaterialsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingMaterialId, setPendingMaterialId] = useState(null);
+
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    setFilters((prev) => (prev.search === urlSearch ? prev : { ...prev, search: urlSearch }));
+    setPage(1);
+  }, [searchParams]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -86,7 +96,13 @@ const MaterialsPage = () => {
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    if (key !== 'search') setPage(1);
+    if (key === 'search') {
+      const next = new URLSearchParams(searchParams);
+      if (value) { next.set('search', value); } else { next.delete('search'); }
+      setSearchParams(next, { replace: true });
+    } else {
+      setPage(1);
+    }
   }
 
   function resetFilters() {
