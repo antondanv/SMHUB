@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
 from uuid import NAMESPACE_URL, uuid5
-from xml.sax.saxutils import escape
 
 from sqlalchemy import select
 
@@ -38,12 +35,6 @@ PDF_MIME = "application/pdf"
 PREVIEW_NOTE = (
     "Предпросмотр собран из очищенной версии конспекта и повторяет структуру PDF-файла."
 )
-PDF_CHROME_CANDIDATES = (
-    Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-    Path("/Applications/Chromium.app/Contents/MacOS/Chromium"),
-)
-
-
 @dataclass(frozen=True)
 class CodeExample:
     language: str
@@ -953,13 +944,6 @@ SEED_MATERIALS: tuple[MaterialSeedSpec, ...] = (
 )
 
 
-def _resolve_chrome_binary() -> Path | None:
-    for candidate in PDF_CHROME_CANDIDATES:
-        if candidate.exists():
-            return candidate
-    return None
-
-
 def _stored_file_name_for_spec(spec: MaterialSeedSpec) -> str:
     return f"{uuid5(NAMESPACE_URL, f'smhub:{spec.slug}').hex}.pdf"
 
@@ -987,215 +971,16 @@ def _write_preview_sidecar(file_path: Path, spec: MaterialSeedSpec) -> None:
     )
 
 
-def _toc_html(spec: MaterialSeedSpec) -> str:
-    items = "".join(
-        f"<li>{escape(section.heading)}</li>"
-        for section in spec.sections
-    )
-    return (
-        '<section class="toc">'
-        "<h2>Структура материала</h2>"
-        f"<ol>{items}</ol>"
-        "</section>"
-    )
-
-
-def _render_section(section: SectionSpec) -> str:
-    paragraphs_html = "".join(
-        f"<p>{escape(paragraph)}</p>"
-        for paragraph in section.paragraphs
-    )
-    bullets_html = "".join(
-        f"<li>{escape(bullet)}</li>"
-        for bullet in section.bullets
-    )
-    code_html = ""
-    if section.code is not None:
-        caption_html = (
-            f'<p class="code-caption">{escape(section.code.caption)}</p>'
-            if section.code.caption
-            else ""
-        )
-        code_html = (
-            f"{caption_html}"
-            '<pre><code class="language-'
-            f'{escape(section.code.language)}">'
-            f"{escape(section.code.code)}"
-            "</code></pre>"
-        )
-
-    return (
-        "<section>"
-        f"<h2>{escape(section.heading)}</h2>"
-        f"{paragraphs_html}"
-        '<div class="section-takeaways">'
-        "<h3>Ключевые тезисы</h3>"
-        f"<ul>{bullets_html}</ul>"
-        "</div>"
-        f"{code_html}"
-        "</section>"
-    )
-
-
-def _build_pdf_html(spec: MaterialSeedSpec) -> str:
-    sections_html = "".join(_render_section(section) for section in spec.sections)
-    return f"""<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <style>
-    @page {{
-      size: A4;
-      margin: 16mm 16mm 18mm 16mm;
-    }}
-    body {{
-      font-family: "Arial Unicode MS", "Arial", sans-serif;
-      color: #1f2937;
-      line-height: 1.58;
-      font-size: 13px;
-    }}
-    h1 {{
-      font-size: 26px;
-      line-height: 1.18;
-      margin: 0 0 10px;
-      color: #111827;
-    }}
-    h2 {{
-      font-size: 17px;
-      line-height: 1.3;
-      margin: 0 0 10px;
-      color: #111827;
-    }}
-    h3 {{
-      font-size: 13px;
-      margin: 0 0 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #0f766e;
-    }}
-    p {{
-      margin: 0 0 10px;
-    }}
-    ul, ol {{
-      margin: 0 0 12px 20px;
-      padding: 0;
-    }}
-    li {{
-      margin: 0 0 6px;
-    }}
-    pre {{
-      margin: 12px 0 0;
-      padding: 12px 14px;
-      border-radius: 10px;
-      background: #f3f4f6;
-      border: 1px solid #d1d5db;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 11px;
-      line-height: 1.45;
-    }}
-    code {{
-      font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
-    }}
-    .hero {{
-      padding: 18px 20px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #ecfeff, #f8fafc);
-      border: 1px solid #dbeafe;
-      margin-bottom: 16px;
-    }}
-    .hero p {{
-      margin-bottom: 0;
-      color: #334155;
-    }}
-    .toc {{
-      padding: 14px 16px;
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      background: #f8fafc;
-      margin-bottom: 18px;
-      page-break-inside: avoid;
-    }}
-    section {{
-      margin-bottom: 18px;
-      page-break-inside: avoid;
-    }}
-    .section-takeaways {{
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-    }}
-    .code-caption {{
-      margin-top: 12px;
-      margin-bottom: 6px;
-      font-size: 12px;
-      color: #475569;
-    }}
-    .meta {{
-      margin-top: 20px;
-      font-size: 11px;
-      color: #64748b;
-    }}
-  </style>
-</head>
-<body>
-  <div class="hero">
-    <h1>{escape(spec.title)}</h1>
-    <p>{escape(spec.description)}</p>
-  </div>
-  {_toc_html(spec)}
-  {sections_html}
-  <p class="meta">Материал подготовлен в обезличенном виде на основе локальных учебных заметок и приведён к единому формату для SMHUB.</p>
-</body>
-</html>
-"""
-
-
-def _write_pdf(path: Path, spec: MaterialSeedSpec) -> None:
-    chrome = _resolve_chrome_binary()
-    if chrome is None:
-        if path.exists():
-            return
-        raise RuntimeError("Google Chrome is required to generate PDF materials")
-
-    html = _build_pdf_html(spec)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    with tempfile.TemporaryDirectory(prefix="smhub-obsidian-") as tmp_dir:
-        html_path = Path(tmp_dir) / f"{spec.slug}.html"
-        html_path.write_text(html, encoding="utf-8")
-        subprocess.run(
-            [
-                str(chrome),
-                "--headless=new",
-                "--disable-gpu",
-                "--no-pdf-header-footer",
-                f"--print-to-pdf={path}",
-                html_path.as_uri(),
-            ],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-
-
 def _ensure_material_file(spec: MaterialSeedSpec) -> tuple[Path, str]:
     stored_file_name = _stored_file_name_for_spec(spec)
     file_path = UPLOADS_DIR / stored_file_name
-    _write_pdf(file_path, spec)
+    if not file_path.exists():
+        raise RuntimeError(
+            "Seed PDF is missing. Restore the pre-generated file at "
+            f"'{file_path}' before running app.db.obsidian_materials."
+        )
     _write_preview_sidecar(file_path, spec)
     return file_path, str(RELATIVE_UPLOADS_DIR / stored_file_name)
-
-
-def _delete_material_artifacts(relative_path: str | None) -> None:
-    if not relative_path:
-        return
-
-    file_path = BASE_DIR / relative_path
-    file_path.unlink(missing_ok=True)
-    _preview_sidecar_path(file_path).unlink(missing_ok=True)
 
 
 def _get_or_create_editor(session) -> User:
@@ -1249,9 +1034,6 @@ def seed_obsidian_materials() -> None:
         ).all()
         existing_by_title = {material.title: material for material in existing_materials}
         used_material_ids: set[int] = set()
-
-        for material in existing_materials:
-            _delete_material_artifacts(material.file_url)
 
         for spec in SEED_MATERIALS:
             subject = subjects.get(spec.subject_name)
