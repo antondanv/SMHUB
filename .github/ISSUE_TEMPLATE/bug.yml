@@ -3,7 +3,13 @@ description: Ошибка, регрессия или поломка сценар
 title: "Bug: "
 labels:
   - bug
+projects:
+  - "antondanv/1"
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Пишите описание нейтрально: без упоминания инструментов, моделей и технических исполнителей.
   - type: textarea
     id: summary
     attributes:

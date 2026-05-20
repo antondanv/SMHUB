@@ -1,7 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
+import LikeButton from './LikeButton';
 import StatusBadge from './StatusBadge';
 
-function MaterialCard({ material, showStatus = false, actionLabel = 'Открыть' }) {
+function MaterialCard({
+  material,
+  showStatus = false,
+  actionLabel = 'Открыть',
+  onToggleFavorite,
+  isFavoritePending = false,
+}) {
   const navigate = useNavigate();
 
   function handleCardClick() {
@@ -13,6 +20,15 @@ function MaterialCard({ material, showStatus = false, actionLabel = 'Откры�
       e.preventDefault();
       navigate(`/materials/${material.id}`);
     }
+  }
+
+  async function handleFavoriteClick(e) {
+    e.stopPropagation();
+    if (!onToggleFavorite) {
+      return;
+    }
+
+    await onToggleFavorite(material);
   }
 
   return (
@@ -33,7 +49,8 @@ function MaterialCard({ material, showStatus = false, actionLabel = 'Откры�
           className={`bookmark-button${material.isFavorite ? ' is-active' : ''}`}
           type="button"
           aria-label={material.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
-          onClick={(e) => e.stopPropagation()}
+          disabled={isFavoritePending}
+          onClick={handleFavoriteClick}
         >
           {material.isFavorite ? 'Сохранено' : 'Сохранить'}
         </button>
@@ -64,7 +81,18 @@ function MaterialCard({ material, showStatus = false, actionLabel = 'Откры�
         <div className="metric-row">
           <span>{material.views} просмотров</span>
           <span>{material.downloads} скачиваний</span>
-          <span>{material.rating} ★</span>
+          <span>
+            {typeof material.favoritesCount === 'number'
+              ? `${material.favoritesCount} в избранном`
+              : `${material.rating} ★`}
+          </span>
+          <span onClick={(e) => e.stopPropagation()}>
+            <LikeButton
+              materialId={material.id}
+              initialCount={material.likes || 0}
+              initialIsLiked={material.isLiked || false}
+            />
+          </span>
         </div>
       </div>
 
