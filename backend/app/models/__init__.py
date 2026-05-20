@@ -15,6 +15,7 @@ from app.models.material import Material
 from app.models.comment import Comment
 from app.models.like import Like
 from app.models.favorite import Favorite
+from app.models.featured_item import FeaturedItem
 from app.models.rating import Rating
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "Like",
     "Favorite",
     "Rating",
+    "FeaturedItem",
 ]
