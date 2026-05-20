@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select, Date
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.auth import get_current_user
@@ -14,6 +15,7 @@ from app.models.enums import MaterialStatus as MaterialStatusEnum
 from app.models.material import Material
 from app.models.material_status import MaterialStatus
 from app.models.user import User
+from app.models.user_event import UserEvent
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -47,12 +49,35 @@ class DashboardSummaryResponse(BaseModel):
     top_authors: list[TopAuthorItem]
 
 
+class TimeseriesPoint(BaseModel):
+    date: str
+    count: int
+
+
+class TimeseriesResponse(BaseModel):
+    metric: str
+    period: str
+    data: list[TimeseriesPoint]
+
+
 def require_admin(current_user: User) -> None:
     if not is_privileged_user(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access is required",
         )
+
+
+PERIOD_DAYS: dict[str, int] = {"7d": 7, "30d": 30, "90d": 90}
+
+METRIC_TO_EVENT: dict[str, str] = {
+    "visits": "material_view",
+    "downloads": "material_download",
+    "likes": "material_like",
+    "registrations": "register",
+    "uploads": "material_upload",
+    "logins": "login",
+}
 
 
 @router.get("/dashboard/summary", response_model=DashboardSummaryResponse)
@@ -105,12 +130,16 @@ def get_dashboard_summary(
     downloads_total = db.scalar(select(func.sum(Material.downloads_count))) or 0
     likes_total = db.scalar(select(func.sum(Material.likes_count))) or 0
 
-    top_materials_rows = db.execute(
-        select(Material)
-        .options(joinedload(Material.author))
-        .order_by(Material.views_count.desc())
-        .limit(10)
-    ).scalars().all()
+    top_materials_rows = (
+        db.execute(
+            select(Material)
+            .options(joinedload(Material.author))
+            .order_by(Material.views_count.desc())
+            .limit(10)
+        )
+        .scalars()
+        .all()
+    )
 
     top_materials = [
         TopMaterialItem(
@@ -153,3 +182,37 @@ def get_dashboard_summary(
         top_materials=top_materials,
         top_authors=top_authors,
     )
+
+
+@router.get("/dashboard/timeseries", response_model=TimeseriesResponse)
+def get_dashboard_timeseries(
+    metric: Literal["visits", "downloads", "likes", "registrations", "uploads", "logins"] = Query("visits"),
+    period: Literal["7d", "30d", "90d"] = Query("7d"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TimeseriesResponse:
+    require_admin(current_user)
+
+    days = PERIOD_DAYS[period]
+    event_type = METRIC_TO_EVENT[metric]
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    rows = db.execute(
+        select(
+            cast(UserEvent.created_at, Date).label("day"),
+            func.count().label("cnt"),
+        )
+        .where(UserEvent.event_type == event_type, UserEvent.created_at >= since)
+        .group_by(cast(UserEvent.created_at, Date))
+        .order_by(cast(UserEvent.created_at, Date))
+    ).all()
+
+    counts_by_day: dict[str, int] = {str(row.day): row.cnt for row in rows}
+
+    data = []
+    for i in range(days):
+        day = (since + timedelta(days=i + 1)).date()
+        day_str = str(day)
+        data.append(TimeseriesPoint(date=day_str, count=counts_by_day.get(day_str, 0)))
+
+    return TimeseriesResponse(metric=metric, period=period, data=data)
