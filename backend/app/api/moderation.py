@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
@@ -21,6 +21,7 @@ from app.models.enums import MaterialStatus as MaterialStatusEnum
 from app.models.material import Material
 from app.models.moderation_log import ModerationLog
 from app.models.user import User
+from app.services import audit_log
 from app.schemas.material import (
     BulkModerationRequest,
     BulkModerationResponse,
@@ -116,6 +117,7 @@ def list_pending_materials(
 def moderate_material(
     material_id: int,
     payload: ModerationDecisionRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MaterialSummaryResponse:
@@ -128,6 +130,7 @@ def moderate_material(
         )
 
     material = get_material_or_404(db, material_id)
+    before_status = material.status.name if material.status else None
     next_status = get_status_or_500(db, MaterialStatusEnum(payload.status))
 
     material.status_id = next_status.id
@@ -149,6 +152,21 @@ def moderate_material(
         actor_id=current_user.id,
         action=action_map.get(payload.status, payload.status),
         comment=payload.comment,
+    )
+
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action=f"material.moderate.{payload.status}",
+        target_type="material",
+        target_id=material.id,
+        payload={
+            "before": {"status": before_status},
+            "after": {"status": payload.status},
+            "comment": payload.comment,
+            "title": material.title,
+        },
+        request=request,
     )
 
     db.commit()
@@ -193,6 +211,7 @@ def get_material_history(
 @router.post("/bulk", response_model=BulkModerationResponse)
 def bulk_moderate(
     payload: BulkModerationRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> BulkModerationResponse:
@@ -246,6 +265,21 @@ def bulk_moderate(
             comment=payload.comment,
         )
         updated += 1
+
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action=f"material.moderate.bulk.{payload.action}",
+        target_type="material",
+        target_id=None,
+        payload={
+            "ids": list(payload.ids),
+            "updated": updated,
+            "skipped": skipped,
+            "comment": payload.comment,
+        },
+        request=request,
+    )
 
     db.commit()
 

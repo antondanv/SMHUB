@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
+import AdminAuditPage from './pages/AdminAuditPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminReferencesPage from './pages/AdminReferencesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
@@ -31,6 +32,7 @@ function App() {
           <Route path="admin/users" element={<AdminUsersPage />} />
           <Route path="admin/references" element={<AdminReferencesPage />} />
           <Route path="admin/reports" element={<AdminReportsPage />} />
+          <Route path="admin/audit" element={<AdminAuditPage />} />
           <Route path="moderation" element={<ModerationPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<LoginPage defaultMode="register" />} />
