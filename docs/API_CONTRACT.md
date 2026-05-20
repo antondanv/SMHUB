@@ -86,6 +86,173 @@ Response `200 OK`:
 }
 ```
 
+## Аутентификация
+
+### `POST /auth/register`
+
+Обычная регистрация пользователя со стартовой ролью `student`.
+
+Request:
+
+```json
+{
+  "email": "student@university.ru",
+  "username": "ivan_21",
+  "password": "secret123",
+  "last_name": "Иванов",
+  "first_name": "Иван",
+  "middle_name": "Иванович",
+  "course_id": 2,
+  "program_id": 1,
+  "group_name": "ИВТ-21-1"
+}
+```
+
+Поля `middle_name`, `course_id`, `program_id`, `group_name` можно передавать как `null`.
+
+Response `201 Created`:
+
+```json
+{
+  "id": 15,
+  "email": "student@university.ru",
+  "username": "ivan_21",
+  "last_name": "Иванов",
+  "first_name": "Иван",
+  "middle_name": "Иванович",
+  "role_id": 1,
+  "role_name": "student",
+  "is_active": true,
+  "course_id": 2,
+  "program_id": 1,
+  "group_name": "ИВТ-21-1"
+}
+```
+
+Возможные ошибки:
+
+- `400 Bad Request` — email или username уже заняты, либо передан несуществующий `course_id` / `program_id`
+
+### `POST /auth/admin/register`
+
+Публичная регистрация администратора по секретному коду из `ADMIN_REGISTRATION_SECRET`.
+
+Если `ADMIN_REGISTRATION_SECRET` пустой, endpoint считается отключённым.
+
+Request:
+
+```json
+{
+  "email": "admin@university.ru",
+  "username": "admin_ivanov",
+  "password": "secret123",
+  "last_name": "Иванов",
+  "first_name": "Иван",
+  "middle_name": null,
+  "course_id": null,
+  "program_id": null,
+  "group_name": null,
+  "admin_secret": "top-secret"
+}
+```
+
+Для администратора учебный контекст не обязателен, поэтому `course_id`, `program_id` и `group_name` можно передавать как `null`.
+
+Response `201 Created`:
+
+```json
+{
+  "id": 16,
+  "email": "admin@university.ru",
+  "username": "admin_ivanov",
+  "last_name": "Иванов",
+  "first_name": "Иван",
+  "middle_name": null,
+  "role_id": 2,
+  "role_name": "admin",
+  "is_active": true,
+  "course_id": null,
+  "program_id": null,
+  "group_name": null
+}
+```
+
+Возможные ошибки:
+
+- `400 Bad Request` — email или username уже заняты, либо передан несуществующий `course_id` / `program_id`
+- `403 Forbidden` — неверный `admin_secret`
+- `404 Not Found` — админская регистрация отключена, потому что `ADMIN_REGISTRATION_SECRET` не задан
+
+### `POST /auth/login`
+
+Вход по email и паролю.
+
+Request:
+
+```json
+{
+  "email": "admin@university.ru",
+  "password": "secret123"
+}
+```
+
+Response `200 OK`:
+
+```json
+{
+  "access_token": "<jwt>",
+  "token_type": "bearer"
+}
+```
+
+Возможные ошибки:
+
+- `401 Unauthorized` — неверный email, пароль или неактивный пользователь
+
+### `GET /auth/me`
+
+Текущий авторизованный пользователь.
+
+- требует `Authorization: Bearer <token>`
+
+Response `200 OK`:
+
+```json
+{
+  "id": 16,
+  "email": "admin@university.ru",
+  "username": "admin_ivanov",
+  "last_name": "Иванов",
+  "first_name": "Иван",
+  "middle_name": null,
+  "role_id": 2,
+  "role_name": "admin",
+  "is_active": true,
+  "course_id": null,
+  "program_id": null,
+  "group_name": null
+}
+```
+
+Возможные ошибки:
+
+- `401 Unauthorized` — отсутствует или невалиден токен
+- `403 Forbidden` — пользователь деактивирован
+
+### Bootstrap первого администратора
+
+При старте приложения backend может создать первого администратора из окружения:
+
+- `FIRST_ADMIN_EMAIL`
+- `FIRST_ADMIN_PASSWORD`
+- `FIRST_ADMIN_USERNAME` — опционально
+
+Правила:
+
+- пользователь создаётся только если в БД ещё нет ни одного администратора;
+- повторный старт приложения не создаёт дубликаты;
+- если `FIRST_ADMIN_USERNAME` не задан, username вычисляется из локальной части email.
+
 ## Материалы
 
 ### `GET /materials`

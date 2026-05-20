@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { getDashboardSummary, getDashboardTimeseries } from '../api/adminApi';
 import { useAuth } from '../context/useAuth';
+import { isAdminUser } from '../utils/auth';
 
 const PERIODS = [
   { value: '7d', label: '7 дней' },
@@ -97,7 +98,7 @@ const AdminDashboardPage = () => {
   const [tsLoading, setTsLoading] = useState(true);
   const [tsError, setTsError] = useState(null);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = isAdminUser(user);
 
   useEffect(() => {
     if (!isAdmin) return;
