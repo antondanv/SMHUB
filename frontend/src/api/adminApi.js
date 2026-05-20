@@ -41,3 +41,8 @@ export async function updateReference(type, id, data) {
 export async function deleteReference(type, id) {
   await apiClient.delete(`/admin/${type}/${id}`);
 }
+
+export async function getAuditLog(params = {}) {
+  const response = await apiClient.get('/admin/audit', { params });
+  return response.data;
+}
