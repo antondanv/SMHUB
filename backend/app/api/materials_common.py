@@ -24,7 +24,6 @@ from app.schemas.material import (
 
 
 ROLE_NAMES_WITH_EXTENDED_ACCESS = {
-    UserRole.MODERATOR.value,
     UserRole.ADMIN.value,
 }
 

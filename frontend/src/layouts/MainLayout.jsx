@@ -7,7 +7,7 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canModerate = user?.role === 'moderator' || user?.role === 'admin';
+  const canModerate = user?.role === 'admin';
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
   const isOnMaterials = location.pathname === '/materials';
