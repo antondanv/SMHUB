@@ -15,6 +15,8 @@ from app.api.programs import router as programs_router
 from app.api.reports import router as reports_router
 from app.api.subjects import router as subjects_router
 from app.api.users import router as users_router
+from app.db.bootstrap import ensure_database_ready
+from app.db.database import engine
 
 
 app = FastAPI(
@@ -46,6 +48,11 @@ app.include_router(homepage_router)
 app.include_router(featured_router)
 app.include_router(moderation_router)
 app.include_router(reports_router)
+
+
+@app.on_event("startup")
+def bootstrap_database() -> None:
+    ensure_database_ready(engine)
 
 
 @app.get("/health")

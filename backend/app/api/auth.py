@@ -1,14 +1,17 @@
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.events import record_event
+from app.core.config import settings
 from app.core.security import create_access_token, decode_access_token
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.auth import AuthUserResponse, Token, UserLogin, UserRegister
-from app.services.auth_service import authenticate_user, create_user
+from app.schemas.auth import AdminRegister, AuthUserResponse, Token, UserLogin, UserRegister
+from app.services.auth_service import authenticate_user, create_user, create_user_with_role
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -90,6 +93,39 @@ def register(
 ) -> User:
     try:
         new_user = create_user(db, user_data)
+        record_event(db, "register", user_id=new_user.id)
+        db.commit()
+        return new_user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.post("/admin/register", response_model=AuthUserResponse, status_code=status.HTTP_201_CREATED)
+def register_admin(
+    user_data: AdminRegister,
+    db: Session = Depends(get_db),
+) -> User:
+    if not settings.admin_registration_secret:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin registration is not available",
+        )
+
+    if not secrets.compare_digest(user_data.admin_secret, settings.admin_registration_secret):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid admin registration secret",
+        )
+
+    try:
+        new_user = create_user_with_role(
+            db,
+            UserRegister(**user_data.model_dump(exclude={"admin_secret"})),
+            "admin",
+        )
         record_event(db, "register", user_id=new_user.id)
         db.commit()
         return new_user

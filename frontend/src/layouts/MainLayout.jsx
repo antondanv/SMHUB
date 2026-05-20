@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { getOpenReportsCount } from '../api/reportsApi';
 import { useAuth } from '../context/useAuth';
+import { isAdminUser } from '../utils/auth';
 
 const MainLayout = () => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canModerate = user?.role === 'admin';
-  const isAdmin = user?.role === 'admin';
+  const canModerate = isAdminUser(user);
+  const isAdmin = isAdminUser(user);
   const [openReports, setOpenReports] = useState(0);
 
   useEffect(() => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { getAuditLog } from '../api/adminApi';
 import { useAuth } from '../context/useAuth';
+import { isAdminUser } from '../utils/auth';
 
 const ACTION_LABELS = {
   'user.role.change': 'Смена роли',
@@ -36,7 +37,7 @@ function formatDateTime(value) {
 
 const AdminAuditPage = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = isAdminUser(user);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [entries, setEntries] = useState([]);

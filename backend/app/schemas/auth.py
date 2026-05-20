@@ -15,6 +15,10 @@ class UserRegister(BaseModel):
     group_name: str | None = Field(default=None, max_length=100)
     
 
+class AdminRegister(UserRegister):
+    admin_secret: str = Field(min_length=1, max_length=255)
+
+
 class UserLogin(BaseModel):
     email: str
     password: str
