@@ -15,6 +15,7 @@ import RatingStars from '../components/RatingStars';
 import ReportButton from '../components/ReportButton';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/useAuth';
+import { isAdminUser } from '../utils/auth';
 
 function formatDate(dateString) {
   if (!dateString) {
@@ -318,8 +319,7 @@ const MaterialDetailPage = () => {
   const canEdit =
     !!user &&
     (user.id === material.author?.id ||
-      user.role_name === 'admin' ||
-      user.role === 'admin');
+      isAdminUser(user));
   const viewerUrl = getMaterialFileUrl(material.id);
 
   return (

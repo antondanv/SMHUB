@@ -7,6 +7,7 @@ import SubjectSelect from '../components/selectors/SubjectSelect';
 import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
 import { createMaterial } from '../api/materialsApi';
+import { isAdminUser } from '../utils/auth';
 
 function getErrorMessage(error) {
   const detail = error.response?.data?.detail;
@@ -261,7 +262,7 @@ const MaterialCreatePage = () => {
               <small>Поддерживаются PDF, DOC, DOCX, PPT и PPTX размером до 20 МБ.</small>
             </label>
 
-            {user?.role === 'admin' && (
+            {isAdminUser(user) && (
               <label className="form-field--wide editorial-checkbox">
                 <input
                   type="checkbox"

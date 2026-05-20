@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { getAdminUser, getAdminUsers, updateAdminUser } from '../api/adminApi';
 import { useAuth } from '../context/useAuth';
+import { isAdminUser } from '../utils/auth';
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return (
@@ -41,7 +42,7 @@ const AdminUsersPage = () => {
   const [pendingAction, setPendingAction] = useState(null);
   const [modal, setModal] = useState(null);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = isAdminUser(user);
 
   const search = searchParams.get('search') || '';
   const roleFilter = searchParams.get('role') || '';
