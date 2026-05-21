@@ -72,6 +72,51 @@ def ensure_first_admin_exists(db: Session) -> User | None:
     )
 
 
+def report_first_admin_status() -> None:
+    """Создать (если нужно) администратора и вывести понятное сообщение.
+
+    Запускается при каждом старте приложения, независимо от
+    ``auto_db_bootstrap``: в docker-режиме миграции и сиды выполняются
+    отдельной командой, поэтому без этого вызова админ не появлялся бы.
+    Любые ошибки логируются, но не валят запуск приложения.
+    """
+    from app.db.database import SessionLocal
+
+    email = settings.first_admin_email.strip().lower()
+    password = settings.first_admin_password
+
+    if not email or not password:
+        print(
+            "\n[SMHUB] Аккаунт администратора не задан.\n"
+            "        Укажите FIRST_ADMIN_EMAIL и FIRST_ADMIN_PASSWORD "
+            "(в backend/.env или в окружении docker-compose) и перезапустите.\n",
+            flush=True,
+        )
+        return
+
+    try:
+        with SessionLocal() as session:
+            created = ensure_first_admin_exists(session)
+    except Exception as exc:  # noqa: BLE001 - старт не должен падать из-за этого
+        print(
+            f"\n[SMHUB] Не удалось создать аккаунт администратора: {exc}\n",
+            flush=True,
+        )
+        return
+
+    if created is not None:
+        print(
+            f"\n[SMHUB] Аккаунт администратора создан успешно: вход по email "
+            f"'{email}'.\n",
+            flush=True,
+        )
+    else:
+        print(
+            f"\n[SMHUB] Аккаунт администратора уже существует (email '{email}').\n",
+            flush=True,
+        )
+
+
 def ensure_database_ready(engine: Engine) -> None:
     global _is_bootstrapped
 
@@ -87,11 +132,9 @@ def ensure_database_ready(engine: Engine) -> None:
         command.upgrade(_get_alembic_config(), "head")
 
         from app.db.seed import seed_reference_data
-        from app.db.database import SessionLocal
 
         seed_reference_data()
 
-        with SessionLocal() as session:
-            ensure_first_admin_exists(session)
-
+        # Создание администратора вынесено в report_first_admin_status(),
+        # который вызывается на старте независимо от auto_db_bootstrap.
         _is_bootstrapped = True

@@ -15,7 +15,7 @@ from app.api.programs import router as programs_router
 from app.api.reports import router as reports_router
 from app.api.subjects import router as subjects_router
 from app.api.users import router as users_router
-from app.db.bootstrap import ensure_database_ready
+from app.db.bootstrap import ensure_database_ready, report_first_admin_status
 from app.db.database import engine
 
 
@@ -53,6 +53,7 @@ app.include_router(reports_router)
 @app.on_event("startup")
 def bootstrap_database() -> None:
     ensure_database_ready(engine)
+    report_first_admin_status()
 
 
 @app.get("/health")

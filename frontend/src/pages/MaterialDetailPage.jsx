@@ -10,6 +10,7 @@ import {
   getMaterialComments,
   updateMaterialComment,
 } from '../api/materialsApi';
+import AppIcon from '../components/AppIcon';
 import LikeButton from '../components/LikeButton';
 import RatingStars from '../components/RatingStars';
 import ReportButton from '../components/ReportButton';
@@ -666,14 +667,18 @@ const MaterialDetailPage = () => {
             </div>
             <div className="related-list">
               <Link className="related-item" to="/materials">
-                <div className="related-item__icon">⌕</div>
+                <div className="related-item__icon">
+                  <AppIcon name="search" size={18} />
+                </div>
                 <div>
                   <strong>Вернуться в каталог</strong>
                   <span>Открыть другой материал или перейти к фильтрам</span>
                 </div>
               </Link>
               <Link className="related-item" to="/materials/create">
-                <div className="related-item__icon">＋</div>
+                <div className="related-item__icon">
+                  <AppIcon name="plus" size={18} />
+                </div>
                 <div>
                   <strong>Загрузить материал</strong>
                   <span>Отправить собственный файл на модерацию</span>
