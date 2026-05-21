@@ -6,6 +6,7 @@ import {
   removeMaterialFromFavorites,
 } from '../api/materialsApi';
 import { getFeatured } from '../api/featuredApi';
+import AppIcon from '../components/AppIcon';
 import MaterialCard from '../components/MaterialCard';
 import heroImage from '../assets/hero.png';
 import { useAuth } from '../context/useAuth';
@@ -197,24 +198,40 @@ const HomePage = () => {
 
           <div className="quick-actions-grid">
             <Link className="quick-action-card" to="/materials/create">
-              <span className="quick-action-card__icon">＋</span>
-              <strong>Загрузить материал</strong>
-              <span>Поделитесь знаниями с сообществом</span>
+              <span className="quick-action-card__icon">
+                <AppIcon name="plus" />
+              </span>
+              <span className="quick-action-card__body">
+                <strong>Загрузить материал</strong>
+                <span>Поделитесь знаниями с сообществом</span>
+              </span>
             </Link>
             <Link className="quick-action-card" to="/my-materials">
-              <span className="quick-action-card__icon">⊡</span>
-              <strong>Мои материалы</strong>
-              <span>Управляйте загруженными файлами</span>
+              <span className="quick-action-card__icon">
+                <AppIcon name="files" />
+              </span>
+              <span className="quick-action-card__body">
+                <strong>Мои материалы</strong>
+                <span>Управляйте загруженными файлами</span>
+              </span>
             </Link>
             <Link className="quick-action-card" to="/favorites">
-              <span className="quick-action-card__icon">♥</span>
-              <strong>Избранное</strong>
-              <span>Ваши сохранённые материалы</span>
+              <span className="quick-action-card__icon">
+                <AppIcon name="heart" />
+              </span>
+              <span className="quick-action-card__body">
+                <strong>Избранное</strong>
+                <span>Ваши сохранённые материалы</span>
+              </span>
             </Link>
             <Link className="quick-action-card" to="/materials">
-              <span className="quick-action-card__icon">⌕</span>
-              <strong>Каталог</strong>
-              <span>Найти материалы по предмету</span>
+              <span className="quick-action-card__icon">
+                <AppIcon name="search" />
+              </span>
+              <span className="quick-action-card__body">
+                <strong>Каталог</strong>
+                <span>Найти материалы по предмету</span>
+              </span>
             </Link>
           </div>
         </section>
@@ -408,17 +425,23 @@ const HomePage = () => {
         </div>
         <div className="steps-grid">
           <Link className="step-card" to="/materials?focus=search">
-            <div className="step-card__icon">⌕</div>
+            <div className="step-card__icon">
+              <AppIcon name="search" size={28} />
+            </div>
             <h3>1. Найдите</h3>
             <p>Ищите по предмету, курсу, типу материала и ключевым словам.</p>
           </Link>
           <Link className="step-card step-card--active" to="/materials?sort=popular">
-            <div className="step-card__icon">✓</div>
+            <div className="step-card__icon">
+              <AppIcon name="check" size={28} />
+            </div>
             <h3>2. Проверьте</h3>
             <p>Ориентируйтесь на рейтинг, сохранения и статус модерации.</p>
           </Link>
           <Link className="step-card" to={isAuthenticated ? '/materials/create' : '/login'}>
-            <div className="step-card__icon">＋</div>
+            <div className="step-card__icon">
+              <AppIcon name="plus" size={28} />
+            </div>
             <h3>3. Сохраните или загрузите</h3>
             <p>Добавляйте материалы в избранное или делитесь своими файлами.</p>
           </Link>

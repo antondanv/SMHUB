@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import AppIcon from '../components/AppIcon';
 import { useAuth } from '../context/useAuth';
 import { isAdminUser } from '../utils/auth';
 
@@ -129,7 +130,9 @@ const MainLayout = () => {
               role="search"
               aria-label="Поиск по материалам"
             >
-              <span className="header-search__icon">⌕</span>
+              <span className="header-search__icon">
+                <AppIcon name="search" size={16} />
+              </span>
               <input
                 ref={searchInputRef}
                 type="search"

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import AppIcon from '../components/AppIcon';
 import CourseSelect from '../components/selectors/CourseSelect';
 import MaterialTypeSelect from '../components/selectors/MaterialTypeSelect';
 import ProgramSelect from '../components/selectors/ProgramSelect';
@@ -34,6 +35,14 @@ const initialFormData = {
   file: null,
 };
 
+function getInitialFormData(user) {
+  return {
+    ...initialFormData,
+    course_id: user?.course_id ? String(user.course_id) : '',
+    program_id: user?.program_id ? String(user.program_id) : '',
+  };
+}
+
 const MaterialCreatePage = () => {
   const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
   const {
@@ -44,13 +53,9 @@ const MaterialCreatePage = () => {
     isLoading: isReferenceDataLoading,
     error: referenceDataError,
   } = useReferenceData();
-  const [formData, setFormData] = useState({
-    ...initialFormData,
-    course_id: user?.course_id ? String(user.course_id) : '',
-    program_id: user?.program_id ? String(user.program_id) : '',
-  });
+  const [formData, setFormData] = useState(() => getInitialFormData(user));
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [submissionResult, setSubmissionResult] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedCourseId = formData.course_id || (user?.course_id ? String(user.course_id) : '');
   const selectedProgramId = formData.program_id || (user?.program_id ? String(user.program_id) : '');
@@ -90,7 +95,7 @@ const MaterialCreatePage = () => {
   async function handleSubmit(event) {
     event.preventDefault();
     setError(null);
-    setSuccess(null);
+    setSubmissionResult(null);
 
     if (!formData.file) {
       setError('Выберите файл для загрузки.');
@@ -100,6 +105,11 @@ const MaterialCreatePage = () => {
     setIsSubmitting(true);
 
     try {
+      const selectedSubject = subjects.find((item) => item.id === Number(formData.subject_id));
+      const selectedMaterialType = materialTypes.find(
+        (item) => item.id === Number(formData.material_type_id)
+      );
+
       const createdMaterial = await createMaterial({
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -111,17 +121,121 @@ const MaterialCreatePage = () => {
         file: formData.file,
       });
 
-      const successMsg = createdMaterial.is_editorial
-        ? `Материал «${createdMaterial.title}» опубликован от редакции.`
-        : `Материал «${createdMaterial.title}» отправлен на модерацию.`;
-      setSuccess(successMsg);
-      setFormData(initialFormData);
+      setSubmissionResult({
+        ...createdMaterial,
+        subject_name: createdMaterial.subject?.name || selectedSubject?.name || '',
+        material_type_name:
+          createdMaterial.material_type?.name || selectedMaterialType?.name || '',
+      });
+      setFormData(getInitialFormData(user));
       event.target.reset();
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleStartAnotherUpload() {
+    setSubmissionResult(null);
+    setError(null);
+    setFormData(getInitialFormData(user));
+  }
+
+  if (submissionResult) {
+    const isEditorial = Boolean(submissionResult.is_editorial);
+    const statusTitle = isEditorial ? 'Материал опубликован.' : 'Материал отправлен на модерацию.';
+    const statusCopy = isEditorial
+      ? 'Карточка уже доступна в каталоге от редакции. Можно открыть её сразу или продолжить загрузку.'
+      : 'Файл загружен, карточка создана, дальше материал пройдёт проверку модератором перед публикацией в каталоге.';
+    const nextActionHref = isEditorial ? `/materials/${submissionResult.id}` : '/my-materials';
+    const nextActionLabel = isEditorial ? 'Открыть материал' : 'Перейти в мои материалы';
+
+    return (
+      <section className="page-shell">
+        <div className="form-layout form-layout--upload">
+          <aside className="surface-card surface-card--sidebar surface-card--upload-aside">
+            <div className="section-heading section-heading--compact">
+              <p className="caps-label">Статус отправки</p>
+              <h1>{isEditorial ? 'Публикация завершена' : 'Очередь модерации'}</h1>
+            </div>
+
+            <p className="body-copy">
+              {isEditorial
+                ? 'Редакционный материал опубликован сразу и уже виден пользователям.'
+                : 'Новый материал попал в очередь проверки. После модерации он появится в общем каталоге.'}
+            </p>
+
+            <div className="metric-stack metric-stack--profile">
+              <div className="metric-stack__item">
+                <strong>{isEditorial ? 'Опубликован' : 'На проверке'}</strong>
+                <span>Текущий статус</span>
+              </div>
+              <div className="metric-stack__item">
+                <strong>{submissionResult.material_type_name || 'Материал'}</strong>
+                <span>Тип загрузки</span>
+              </div>
+              <div className="metric-stack__item">
+                <strong>{submissionResult.subject_name || 'Без предмета'}</strong>
+                <span>Предмет</span>
+              </div>
+            </div>
+          </aside>
+
+          <div className="surface-card surface-card--form surface-card--upload-form submission-state">
+            <div className="submission-state__hero">
+              <span className="submission-state__icon" aria-hidden="true">
+                <AppIcon name={isEditorial ? 'check' : 'files'} size={28} />
+              </span>
+
+              <div className="section-heading">
+                <p className="caps-label">{isEditorial ? 'Опубликовано' : 'Отправлено на модерацию'}</p>
+                <h2>{statusTitle}</h2>
+                <p className="hero-copy">{statusCopy}</p>
+              </div>
+            </div>
+
+            <div className="submission-state__details">
+              <div className="submission-state__detail">
+                <strong>Название</strong>
+                <span>{submissionResult.title}</span>
+              </div>
+              <div className="submission-state__detail">
+                <strong>Файл</strong>
+                <span>{submissionResult.file_name || 'Файл загружен'}</span>
+              </div>
+              <div className="submission-state__detail">
+                <strong>Статус</strong>
+                <span>{isEditorial ? 'Опубликован в каталоге' : 'Ожидает проверки модератором'}</span>
+              </div>
+            </div>
+
+            <div className="mini-list">
+              <div className="mini-list__item">
+                <strong>{isEditorial ? 'Что дальше' : 'Что происходит дальше'}</strong>
+                <span>
+                  {isEditorial
+                    ? 'Материал уже доступен пользователям. Вы можете открыть карточку или продолжить загрузку новых файлов.'
+                    : 'Модератор проверит файл, описание и привязку к предмету. После одобрения материал появится в каталоге.'}
+                </span>
+              </div>
+            </div>
+
+            <div className="submission-state__actions">
+              <button type="button" className="button button--primary" onClick={handleStartAnotherUpload}>
+                Загрузить ещё один
+              </button>
+              <Link className="button button--secondary" to={nextActionHref}>
+                {nextActionLabel}
+              </Link>
+              <Link className="button button--ghost" to="/materials">
+                Вернуться в каталог
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -171,7 +285,6 @@ const MaterialCreatePage = () => {
           )}
 
           {error && <p className="form-error">{error}</p>}
-          {success && <p className="form-success">{success}</p>}
 
           <form onSubmit={handleSubmit} className="form-grid form-grid--two material-create-form">
             <label className="form-field--wide">

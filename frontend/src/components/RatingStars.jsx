@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { rateMaterial, updateRating } from '../api/materialsApi';
+import AppIcon from './AppIcon';
 import { useAuth } from '../context/useAuth';
 
 function RatingStars({ materialId, initialAvg = null, initialCount = 0, initialUserRating = null }) {
@@ -45,7 +46,7 @@ function RatingStars({ materialId, initialAvg = null, initialCount = 0, initialU
             onClick={() => handleRate(star)}
             aria-label={`${star} звезд`}
           >
-            ★
+            <AppIcon name="star" size={18} />
           </button>
         ))}
       </div>

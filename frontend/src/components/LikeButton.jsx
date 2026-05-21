@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { likeMaterial, unlikeMaterial } from '../api/materialsApi';
+import AppIcon from './AppIcon';
 import { useAuth } from '../context/useAuth';
 
 function LikeButton({ materialId, initialCount = 0, initialIsLiked = false, onToggle }) {
@@ -32,7 +33,7 @@ function LikeButton({ materialId, initialCount = 0, initialIsLiked = false, onTo
       aria-label={isLiked ? 'Убрать из избранного' : 'Добавить в избранное'}
       onClick={handleToggle}
     >
-      ♥ {count}
+      <AppIcon className="like-button__icon" name="heart" size={16} /> {count}
     </button>
   );
 }

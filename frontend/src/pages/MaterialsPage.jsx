@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getMaterials } from '../api/materialsApi';
+import AppIcon from '../components/AppIcon';
 import MaterialCard from '../components/MaterialCard';
 import { useReferenceData } from '../context/useReferenceData';
 
@@ -227,7 +228,9 @@ const MaterialsPage = () => {
         <div className="catalog-content">
           <div className="catalog-topbar">
             <label className="catalog-search" aria-label="Поиск по каталогу">
-              <span>⌕</span>
+              <span>
+                <AppIcon name="search" size={16} />
+              </span>
               <input
                 ref={searchInputRef}
                 type="search"
