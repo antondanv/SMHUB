@@ -13,7 +13,7 @@ from app.api.materials_common import (
     base_material_query,
     serialize_material,
 )
-from app.models.enums import UserRole
+from app.models.enums import MaterialStatus as MaterialStatusEnum, UserRole
 from app.db.database import get_db
 from app.models.featured_item import FeaturedItem
 from app.models.material import Material
@@ -55,6 +55,14 @@ def _require_admin(current_user: User) -> None:
         )
 
 
+def _is_published_material(material: Material | None) -> bool:
+    return (
+        material is not None
+        and material.status is not None
+        and material.status.name == MaterialStatusEnum.PUBLISHED.value
+    )
+
+
 # ──────────────────────────── Public ────────────────────────────
 
 @router.get("/home/featured", response_model=list[MaterialSummaryResponse])
@@ -73,7 +81,10 @@ def get_featured(
 
     material_ids = [i.material_id for i in items]
     materials = db.scalars(
-        base_material_query().where(Material.id.in_(material_ids))
+        base_material_query().where(
+            Material.id.in_(material_ids),
+            Material.status.has(name=MaterialStatusEnum.PUBLISHED.value),
+        )
     ).unique().all()
 
     by_id = {m.id: m for m in materials}
@@ -120,9 +131,18 @@ def create_featured(
 ):
     _require_admin(current_user)
 
-    material = db.get(Material, data.material_id)
+    material = db.scalar(
+        select(Material)
+        .options(joinedload(Material.status))
+        .where(Material.id == data.material_id)
+    )
     if material is None:
         raise HTTPException(status_code=404, detail="Material not found")
+    if data.is_active is not False and not _is_published_material(material):
+        raise HTTPException(
+            status_code=409,
+            detail="Only published materials can be activated in public featured sections",
+        )
 
     item = FeaturedItem(
         section=data.section,
@@ -161,7 +181,9 @@ def update_featured(
     _require_admin(current_user)
 
     item = db.scalar(
-        select(FeaturedItem).options(joinedload(FeaturedItem.material)).where(FeaturedItem.id == item_id)
+        select(FeaturedItem)
+        .options(joinedload(FeaturedItem.material).joinedload(Material.status))
+        .where(FeaturedItem.id == item_id)
     )
     if item is None:
         raise HTTPException(status_code=404, detail="Featured item not found")
@@ -169,6 +191,11 @@ def update_featured(
     if data.position is not None:
         item.position = data.position
     if data.is_active is not None:
+        if data.is_active and not _is_published_material(item.material):
+            raise HTTPException(
+                status_code=409,
+                detail="Only published materials can be activated in public featured sections",
+            )
         item.is_active = data.is_active
 
     db.commit()

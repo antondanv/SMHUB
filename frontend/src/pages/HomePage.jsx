@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   addMaterialToFavorites,
@@ -64,7 +64,7 @@ function useMaterialsSection(params) {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [params]);
 
   return { items, setItems, isLoading };
 }
@@ -97,16 +97,18 @@ const HomePage = () => {
   const { user, isAuthenticated } = useAuth();
   const { subjects } = useReferenceData();
   const navigate = useNavigate();
+  const latestParams = useMemo(() => ({ sort: 'new', per_page: 3 }), []);
+  const popularParams = useMemo(() => ({ sort: 'popular', per_page: 3 }), []);
   const {
     items: latestMaterials,
     setItems: setLatestMaterials,
     isLoading: latestLoading,
-  } = useMaterialsSection({ sort: 'new', per_page: 3 });
+  } = useMaterialsSection(latestParams);
   const {
     items: popularMaterials,
     setItems: setPopularMaterials,
     isLoading: popularLoading,
-  } = useMaterialsSection({ sort: 'popular', per_page: 3 });
+  } = useMaterialsSection(popularParams);
   const { items: heroFeatured, setItems: setHeroFeatured } = useFeaturedSection('hero');
   const { items: recommendedFeatured, setItems: setRecommendedFeatured } =
     useFeaturedSection('recommended');

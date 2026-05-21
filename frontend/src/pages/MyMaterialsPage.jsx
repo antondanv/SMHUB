@@ -33,24 +33,27 @@ const MyMaterialsPage = () => {
     if (!isAuthenticated) return;
 
     let isActive = true;
-    setIsLoading(true);
-    setError(null);
 
-    const params = { per_page: 50 };
-    if (statusFilter) params.status = statusFilter;
+    async function loadMyMaterials() {
+      setIsLoading(true);
+      setError(null);
 
-    getMyMaterials(params)
-      .then((data) => {
+      const params = { per_page: 50 };
+      if (statusFilter) params.status = statusFilter;
+
+      try {
+        const data = await getMyMaterials(params);
         if (!isActive) return;
         setMaterials(data.items);
         setTotal(data.total);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (isActive) setError(err);
-      })
-      .finally(() => {
+      } finally {
         if (isActive) setIsLoading(false);
-      });
+      }
+    }
+
+    loadMyMaterials();
 
     return () => {
       isActive = false;

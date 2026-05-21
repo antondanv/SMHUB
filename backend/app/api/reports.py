@@ -202,8 +202,10 @@ def update_report(
             material.status = archived
     elif data.action == "delete_comment" and report.target_type == "comment":
         comment = db.get(Comment, report.target_id)
-        if comment is not None:
-            db.delete(comment)
+        if comment is not None and not comment.is_deleted:
+            comment.is_deleted = True
+            if comment.material is not None:
+                comment.material.comments_count = max(comment.material.comments_count - 1, 0)
 
     audit_log.record(
         db,
