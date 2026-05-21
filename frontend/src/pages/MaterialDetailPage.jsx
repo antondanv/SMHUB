@@ -5,9 +5,9 @@ import {
   deleteMaterial,
   deleteMaterialComment,
   downloadMaterial,
+  getMaterialFileBlob,
   getMaterialById,
   getMaterialComments,
-  getMaterialFileUrl,
   updateMaterialComment,
 } from '../api/materialsApi';
 import LikeButton from '../components/LikeButton';
@@ -86,6 +86,8 @@ const MaterialDetailPage = () => {
   const [errorCode, setErrorCode] = useState(null);
   const [actionMessage, setActionMessage] = useState('');
   const [isViewerLoading, setIsViewerLoading] = useState(true);
+  const [viewerUrl, setViewerUrl] = useState('');
+  const [viewerError, setViewerError] = useState('');
 
   useEffect(() => {
     let isActive = true;
@@ -141,6 +143,46 @@ const MaterialDetailPage = () => {
       isActive = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!material) {
+      return undefined;
+    }
+
+    let isActive = true;
+    let objectUrl = '';
+
+    async function loadViewer() {
+      setIsViewerLoading(true);
+      setViewerError('');
+      setViewerUrl('');
+
+      try {
+        const { blob, contentType } = await getMaterialFileBlob(material.id);
+        objectUrl = window.URL.createObjectURL(
+          new Blob([blob], { type: contentType || material.mime_type })
+        );
+
+        if (isActive) {
+          setViewerUrl(objectUrl);
+        }
+      } catch {
+        if (isActive) {
+          setViewerError('Не удалось загрузить встроенный просмотр. Используйте кнопку «Скачать».');
+          setIsViewerLoading(false);
+        }
+      }
+    }
+
+    loadViewer();
+
+    return () => {
+      isActive = false;
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [material]);
 
   async function handleDownload() {
     if (!material) {
@@ -320,7 +362,6 @@ const MaterialDetailPage = () => {
     !!user &&
     (user.id === material.author?.id ||
       isAdminUser(user));
-  const viewerUrl = getMaterialFileUrl(material.id);
 
   return (
     <section className="page-shell">
@@ -432,12 +473,17 @@ const MaterialDetailPage = () => {
                     <div className="preview-block" />
                   </div>
                 )}
-                <iframe
-                  src={viewerUrl}
-                  title={material.title}
-                  className="material-viewer"
-                  onLoad={() => setIsViewerLoading(false)}
-                />
+                {viewerUrl ? (
+                  <iframe
+                    src={viewerUrl}
+                    title={material.title}
+                    className="material-viewer"
+                    onLoad={() => setIsViewerLoading(false)}
+                  />
+                ) : null}
+                {viewerError && !isViewerLoading ? (
+                  <div className="inline-alert inline-alert--warning">{viewerError}</div>
+                ) : null}
                 <p className="profile-muted material-viewer__fallback">
                   Если встроенный просмотрщик не отображается, используйте кнопку
                   «Скачать».

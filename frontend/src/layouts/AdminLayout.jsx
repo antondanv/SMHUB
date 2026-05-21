@@ -21,11 +21,20 @@ const AdminLayout = () => {
   const [openReports, setOpenReports] = useState(0);
 
   useEffect(() => {
-    if (!isAdmin) {
-      setOpenReports(0);
-      return;
+    async function syncOpenReports() {
+      if (!isAdmin) {
+        setOpenReports(0);
+        return;
+      }
+
+      try {
+        setOpenReports(await getOpenReportsCount());
+      } catch {
+        setOpenReports(0);
+      }
     }
-    getOpenReportsCount().then(setOpenReports).catch(() => setOpenReports(0));
+
+    syncOpenReports();
   }, [isAdmin, location.pathname]);
 
   if (isAuthLoading) {

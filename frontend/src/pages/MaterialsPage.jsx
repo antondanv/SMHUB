@@ -13,6 +13,22 @@ const DEFAULT_FILTERS = {
   sort: 'new',
 };
 
+function readFiltersFromParams(searchParams) {
+  return {
+    ...DEFAULT_FILTERS,
+    search: searchParams.get('search') || '',
+    subject_id: searchParams.get('subject_id') || '',
+    material_type_id: searchParams.get('material_type_id') || '',
+    course_id: searchParams.get('course_id') || '',
+    program_id: searchParams.get('program_id') || '',
+    sort: searchParams.get('sort') === 'popular' ? 'popular' : DEFAULT_FILTERS.sort,
+  };
+}
+
+function areFiltersEqual(left, right) {
+  return Object.keys(DEFAULT_FILTERS).every((key) => left[key] === right[key]);
+}
+
 function formatFileSize(bytes) {
   if (!bytes) return '';
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
@@ -62,12 +78,8 @@ const MaterialsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { subjects, materialTypes, courses, programs } = useReferenceData();
   const searchInputRef = useRef(null);
-  const [filters, setFilters] = useState(() => ({
-    ...DEFAULT_FILTERS,
-    search: searchParams.get('search') || '',
-    sort: searchParams.get('sort') === 'popular' ? 'popular' : DEFAULT_FILTERS.sort,
-  }));
-  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('search') || '');
+  const [filters, setFilters] = useState(() => readFiltersFromParams(searchParams));
+  const [debouncedSearch, setDebouncedSearch] = useState(() => readFiltersFromParams(searchParams).search);
   const [page, setPage] = useState(1);
   const [materials, setMaterials] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -76,9 +88,14 @@ const MaterialsPage = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const urlSearch = searchParams.get('search') || '';
-    setFilters((prev) => (prev.search === urlSearch ? prev : { ...prev, search: urlSearch }));
-    setPage(1);
+    function syncFiltersFromUrl() {
+      const nextFilters = readFiltersFromParams(searchParams);
+      setFilters((prev) => (areFiltersEqual(prev, nextFilters) ? prev : nextFilters));
+      setDebouncedSearch((prev) => (prev === nextFilters.search ? prev : nextFilters.search));
+      setPage((prev) => (prev === 1 ? prev : 1));
+    }
+
+    syncFiltersFromUrl();
   }, [searchParams]);
 
   useEffect(() => {
@@ -97,18 +114,25 @@ const MaterialsPage = () => {
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    if (key === 'search') {
-      const next = new URLSearchParams(searchParams);
-      if (value) { next.set('search', value); } else { next.delete('search'); }
-      setSearchParams(next, { replace: true });
-    } else {
-      setPage(1);
-    }
+    setPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (key === 'sort' && value === DEFAULT_FILTERS.sort) {
+        next.delete(key);
+      } else if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    }, { replace: true });
   }
 
   function resetFilters() {
     setFilters(DEFAULT_FILTERS);
+    setDebouncedSearch('');
     setPage(1);
+    setSearchParams({}, { replace: true });
   }
 
   const hasActiveFilters =
@@ -120,30 +144,33 @@ const MaterialsPage = () => {
 
   useEffect(() => {
     let isActive = true;
-    setIsLoading(true);
-    setError(null);
 
-    const params = { page, per_page: 12, sort: filters.sort };
-    if (debouncedSearch) params.search = debouncedSearch;
-    if (filters.subject_id) params.subject_id = filters.subject_id;
-    if (filters.material_type_id) params.material_type_id = filters.material_type_id;
-    if (filters.course_id) params.course_id = filters.course_id;
-    if (filters.program_id) params.program_id = filters.program_id;
+    async function loadMaterials() {
+      setIsLoading(true);
+      setError(null);
 
-    getMaterials(params)
-      .then((data) => {
+      const params = { page, per_page: 12, sort: filters.sort };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (filters.subject_id) params.subject_id = filters.subject_id;
+      if (filters.material_type_id) params.material_type_id = filters.material_type_id;
+      if (filters.course_id) params.course_id = filters.course_id;
+      if (filters.program_id) params.program_id = filters.program_id;
+
+      try {
+        const data = await getMaterials(params);
         if (!isActive) return;
         setMaterials(data.items.map(normalizeApiMaterial));
         setTotalPages(data.total_pages);
         setTotal(data.total);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!isActive) return;
         setError(err);
-      })
-      .finally(() => {
+      } finally {
         if (isActive) setIsLoading(false);
-      });
+      }
+    }
+
+    loadMaterials();
 
     return () => {
       isActive = false;
