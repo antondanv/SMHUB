@@ -131,9 +131,22 @@ def ensure_database_ready(engine: Engine) -> None:
         # very first bootstrap state.
         command.upgrade(_get_alembic_config(), "head")
 
-        from app.db.seed import seed_reference_data
+        from app.db.seed import seed_materials, seed_reference_data
 
         seed_reference_data()
+
+        # Сидинг редакционных материалов идемпотентен и не перезаписывает
+        # накопленные метрики у уже существующих записей. На Vercel это
+        # единственный способ наполнить базу — там нет docker-команды,
+        # которая делала бы это отдельно. Падение сидинга не должно ронять
+        # старт приложения.
+        try:
+            seed_materials()
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"\n[SMHUB] Не удалось засидить материалы: {exc}\n",
+                flush=True,
+            )
 
         # Создание администратора вынесено в report_first_admin_status(),
         # который вызывается на старте независимо от auto_db_bootstrap.
