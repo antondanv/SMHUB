@@ -8,6 +8,7 @@ import AdminRegisterPage from './pages/AdminRegisterPage';
 import AdminReferencesPage from './pages/AdminReferencesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import ConfirmEmailPage from './pages/ConfirmEmailPage';
 import FavoritesPage from './pages/FavoritesPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -18,6 +19,7 @@ import MaterialsPage from './pages/MaterialsPage';
 import ModerationPage from './pages/ModerationPage';
 import MyMaterialsPage from './pages/MyMaterialsPage';
 import ProfilePage from './pages/ProfilePage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 function App() {
   return (
@@ -43,6 +45,8 @@ function App() {
           </Route>
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<LoginPage defaultMode="register" />} />
+          <Route path="confirm-email" element={<ConfirmEmailPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Routes>

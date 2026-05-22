@@ -23,7 +23,25 @@ export async function loginUser(loginData) {
 }
 
 export async function forgotPassword(payload) {
-  const response = await apiClient.post('/auth/forgot-password', payload);
+  const response = await apiClient.post('/auth/password/forgot', payload);
+
+  return response.data;
+}
+
+export async function resetPassword(payload) {
+  const response = await apiClient.post('/auth/password/reset', payload);
+
+  return response.data;
+}
+
+export async function confirmEmail(payload) {
+  const response = await apiClient.post('/auth/email/confirm', payload);
+
+  return response.data;
+}
+
+export async function resendConfirmation(payload) {
+  const response = await apiClient.post('/auth/email/resend-confirmation', payload);
 
   return response.data;
 }

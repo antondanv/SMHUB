@@ -72,7 +72,7 @@ def ensure_first_admin_exists(db: Session) -> User | None:
         group_name=None,
     )
 
-    return create_user_with_role(db, admin_payload, "admin")
+    return create_user_with_role(db, admin_payload, "admin", email_confirmed=True)
 
 
 def report_first_admin_status() -> None:
