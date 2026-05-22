@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { loginUser, registerAdmin } from '../api/authApi';
 import heroImage from '../assets/hero.png';
 import { useAuth } from '../context/useAuth';
+import { PASSWORD_HINT, validatePasswordWithConfirmation } from '../utils/password';
 
 const initialRegisterForm = {
   email: '',
   username: '',
   password: '',
+  password_confirm: '',
   last_name: '',
   first_name: '',
   middle_name: '',
@@ -29,6 +31,16 @@ const AdminRegisterPage = () => {
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
+
+    const passwordError = validatePasswordWithConfirmation(
+      registerForm.password,
+      registerForm.password_confirm
+    );
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setIsSubmitting(true);
 
     const payload = {
@@ -184,6 +196,19 @@ const AdminRegisterPage = () => {
                 value={registerForm.password}
                 onChange={handleChange}
                 placeholder="Минимум 8 символов"
+                required
+              />
+              <small>{PASSWORD_HINT}</small>
+            </label>
+
+            <label className="form-field--wide">
+              Подтверждение пароля
+              <input
+                type="password"
+                name="password_confirm"
+                value={registerForm.password_confirm}
+                onChange={handleChange}
+                placeholder="Повторите пароль"
                 required
               />
             </label>

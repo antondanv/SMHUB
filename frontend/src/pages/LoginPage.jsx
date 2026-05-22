@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
-import { registerUser } from '../api/authApi';
+import { forgotPassword, registerUser } from '../api/authApi';
 import { useAuth } from '../context/useAuth';
 import heroImage from '../assets/hero.png';
+import { PASSWORD_HINT, validatePasswordWithConfirmation } from '../utils/password';
 
 const isDevelopment = import.meta.env.DEV;
 const DEMO_CREDENTIALS_STORAGE_KEY = 'smhub-dev-demo-credentials';
-const DEMO_PASSWORD = 'demo123';
+const DEMO_PASSWORD = 'demo1234';
 
 const initialLoginForm = {
   email: '',
@@ -18,12 +19,22 @@ const initialRegisterForm = {
   email: '',
   username: '',
   password: '',
+  password_confirm: '',
   last_name: '',
   first_name: '',
   middle_name: '',
   course_value: '',
   program_value: '',
   group_name: '',
+};
+
+const initialForgotForm = {
+  email: '',
+  username: '',
+  last_name: '',
+  first_name: '',
+  new_password: '',
+  new_password_confirm: '',
 };
 
 function normalizeValue(value) {
@@ -117,6 +128,7 @@ function buildDemoRegisterForm(courses, programs) {
     email: `demo.${seed}@smhub.local`,
     username: `demo_${seed}`,
     password: DEMO_PASSWORD,
+    password_confirm: DEMO_PASSWORD,
     last_name: 'Тестов',
     first_name: 'Тимур',
     middle_name: 'Демо',
@@ -130,9 +142,11 @@ const LoginPage = ({ defaultMode = 'login' }) => {
   const [mode, setMode] = useState(defaultMode);
   const [loginForm, setLoginForm] = useState(initialLoginForm);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
+  const [forgotForm, setForgotForm] = useState(initialForgotForm);
   const [courses, setCourses] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -158,6 +172,7 @@ const LoginPage = ({ defaultMode = 'login' }) => {
   function switchMode(nextMode) {
     setMode(nextMode);
     setError('');
+    setInfo('');
   }
 
   function handleChange(event) {
@@ -165,6 +180,11 @@ const LoginPage = ({ defaultMode = 'login' }) => {
 
     if (mode === 'login') {
       setLoginForm((currentForm) => ({ ...currentForm, [name]: value }));
+      return;
+    }
+
+    if (mode === 'forgot') {
+      setForgotForm((currentForm) => ({ ...currentForm, [name]: value }));
       return;
     }
 
@@ -215,9 +235,56 @@ const LoginPage = ({ defaultMode = 'login' }) => {
     }
   }
 
+  async function handleForgotSubmit(event) {
+    event.preventDefault();
+    setError('');
+    setInfo('');
+
+    const passwordError = validatePasswordWithConfirmation(
+      forgotForm.new_password,
+      forgotForm.new_password_confirm
+    );
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await forgotPassword({
+        email: forgotForm.email,
+        username: forgotForm.username,
+        last_name: forgotForm.last_name,
+        first_name: forgotForm.first_name,
+        new_password: forgotForm.new_password,
+      });
+      setForgotForm(initialForgotForm);
+      setLoginForm((currentForm) => ({ ...currentForm, email: forgotForm.email }));
+      setMode('login');
+      setInfo('Пароль изменён. Войдите с новым паролем.');
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.detail || 'Не удалось сбросить пароль. Проверьте данные.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleRegisterSubmit(event) {
     event.preventDefault();
     setError('');
+
+    const passwordError = validatePasswordWithConfirmation(
+      registerForm.password,
+      registerForm.password_confirm
+    );
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setIsSubmitting(true);
 
     const courseId = resolveCourseId(registerForm.course_value, courses);
@@ -265,6 +332,7 @@ const LoginPage = ({ defaultMode = 'login' }) => {
   }
 
   const isLogin = mode === 'login';
+  const isForgot = mode === 'forgot';
 
   return (
     <section className="page-shell">
@@ -305,34 +373,130 @@ const LoginPage = ({ defaultMode = 'login' }) => {
         <div className="auth-card">
           <div className="section-heading section-heading--compact">
             <p className="caps-label">Аккаунт</p>
-            <h2>{isLogin ? 'Вход в систему' : 'Регистрация'}</h2>
+            <h2>{isForgot ? 'Восстановление пароля' : isLogin ? 'Вход в систему' : 'Регистрация'}</h2>
             <p className="hero-copy">
-              {isLogin
-                ? 'Введите данные, чтобы продолжить работу в SMHUB.'
-                : 'Заполните данные аккаунта и учебный контекст.'}
+              {isForgot
+                ? 'Подтвердите данные аккаунта, чтобы задать новый пароль.'
+                : isLogin
+                  ? 'Введите данные, чтобы продолжить работу в SMHUB.'
+                  : 'Заполните данные аккаунта и учебный контекст.'}
             </p>
           </div>
 
-          <div className="auth-switch" role="tablist" aria-label="Режим авторизации">
-            <button
-              className={isLogin ? 'is-active' : ''}
-              type="button"
-              onClick={() => switchMode('login')}
-            >
-              Вход
-            </button>
-            <button
-              className={!isLogin ? 'is-active' : ''}
-              type="button"
-              onClick={() => switchMode('register')}
-            >
-              Регистрация
-            </button>
-          </div>
+          {isForgot ? null : (
+            <div className="auth-switch" role="tablist" aria-label="Режим авторизации">
+              <button
+                className={isLogin ? 'is-active' : ''}
+                type="button"
+                onClick={() => switchMode('login')}
+              >
+                Вход
+              </button>
+              <button
+                className={!isLogin ? 'is-active' : ''}
+                type="button"
+                onClick={() => switchMode('register')}
+              >
+                Регистрация
+              </button>
+            </div>
+          )}
 
+          {info ? <p className="form-success">{info}</p> : null}
           {error ? <p className="form-error">{error}</p> : null}
 
-          {isLogin ? (
+          {isForgot ? (
+            <form className="form-grid form-grid--two auth-form" onSubmit={handleForgotSubmit}>
+              <p className="hero-copy form-field--wide" style={{ marginTop: 0 }}>
+                Так как почтовый сервис не подключён, восстановление выполняется по
+                личным данным: укажите email, имя пользователя и ФИО из вашего
+                аккаунта.
+              </p>
+
+              <label className="form-field--wide">
+                Email
+                <input
+                  type="email"
+                  name="email"
+                  value={forgotForm.email}
+                  onChange={handleChange}
+                  placeholder="student@university.ru"
+                  required
+                />
+              </label>
+
+              <label className="form-field--wide">
+                Имя пользователя
+                <input
+                  type="text"
+                  name="username"
+                  value={forgotForm.username}
+                  onChange={handleChange}
+                  placeholder="Например, ivan_21"
+                  required
+                />
+              </label>
+
+              <label>
+                Фамилия
+                <input
+                  type="text"
+                  name="last_name"
+                  value={forgotForm.last_name}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+
+              <label>
+                Имя
+                <input
+                  type="text"
+                  name="first_name"
+                  value={forgotForm.first_name}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+
+              <label className="form-field--wide">
+                Новый пароль
+                <input
+                  type="password"
+                  name="new_password"
+                  value={forgotForm.new_password}
+                  onChange={handleChange}
+                  placeholder="Минимум 8 символов"
+                  required
+                />
+                <small>{PASSWORD_HINT}</small>
+              </label>
+
+              <label className="form-field--wide">
+                Подтверждение пароля
+                <input
+                  type="password"
+                  name="new_password_confirm"
+                  value={forgotForm.new_password_confirm}
+                  onChange={handleChange}
+                  placeholder="Повторите новый пароль"
+                  required
+                />
+              </label>
+
+              <button className="button button--primary form-button--wide" type="submit">
+                {isSubmitting ? 'Сбрасываем...' : 'Задать новый пароль'}
+              </button>
+
+              <button
+                className="button button--ghost form-button--wide"
+                type="button"
+                onClick={() => switchMode('login')}
+              >
+                Вернуться ко входу
+              </button>
+            </form>
+          ) : isLogin ? (
             <form className="form-grid auth-form auth-form--login" onSubmit={handleLoginSubmit}>
               {isDevelopment ? (
                 <div className="auth-dev-tools">
@@ -372,6 +536,14 @@ const LoginPage = ({ defaultMode = 'login' }) => {
 
               <button className="button button--primary form-button--wide" type="submit">
                 {isSubmitting ? 'Входим...' : 'Войти'}
+              </button>
+
+              <button
+                className="auth-link-button form-field--wide"
+                type="button"
+                onClick={() => switchMode('forgot')}
+              >
+                Забыли пароль?
               </button>
             </form>
           ) : (
@@ -452,6 +624,19 @@ const LoginPage = ({ defaultMode = 'login' }) => {
                   value={registerForm.password}
                   onChange={handleChange}
                   placeholder="Минимум 8 символов"
+                  required
+                />
+                <small>{PASSWORD_HINT}</small>
+              </label>
+
+              <label className="form-field--wide">
+                Подтверждение пароля
+                <input
+                  type="password"
+                  name="password_confirm"
+                  value={registerForm.password_confirm}
+                  onChange={handleChange}
+                  placeholder="Повторите пароль"
                   required
                 />
               </label>

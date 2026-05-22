@@ -2213,6 +2213,21 @@ small {
   gap: var(--space-sm);
 }
 
+.auth-link-button {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-top: var(--space-xs);
+  color: var(--primary);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.auth-link-button:hover {
+  text-decoration: underline;
+}
+
 /* ===== Detail page ===== */
 .detail-stitch-layout {
   display: grid;
