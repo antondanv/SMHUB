@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
-import { getAdminUser, getAdminUsers, updateAdminUser } from '../api/adminApi';
+import { deleteAdminUser, getAdminUser, getAdminUsers, updateAdminUser } from '../api/adminApi';
 import { useAuth } from '../context/useAuth';
 import { isAdminUser } from '../utils/auth';
 
-function ConfirmModal({ message, onConfirm, onCancel }) {
+function ConfirmModal({ title, message, confirmLabel = 'Подтвердить', danger = false, onConfirm, onCancel }) {
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal-card">
+        {title ? <h3>{title}</h3> : null}
         <p>{message}</p>
         <div className="action-row">
-          <button type="button" className="button button--primary" onClick={onConfirm}>
-            Подтвердить
+          <button
+            type="button"
+            className={danger ? 'button button--danger' : 'button button--primary'}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
           </button>
           <button type="button" className="button button--ghost" onClick={onCancel}>
             Отмена
@@ -110,13 +115,24 @@ const AdminUsersPage = () => {
   }, [activeUserId]);
 
   function askAction(action) {
+    const name = activeUser?.full_name || activeUser?.username;
     const messages = {
-      'make-admin': `Назначить ${activeUser?.username} администратором?`,
-      'make-student': `Снять права администратора у ${activeUser?.username}?`,
-      'deactivate': `Заблокировать ${activeUser?.username}? Пользователь не сможет входить.`,
-      'activate': `Разблокировать ${activeUser?.username}?`,
+      'make-admin': `Назначить ${name} администратором?`,
+      'make-student': `Снять права администратора у ${name}?`,
+      'deactivate': `Заблокировать ${name}? Пользователь не сможет входить.`,
+      'activate': `Разблокировать ${name}?`,
+      'delete':
+        `Безвозвратно удалить ${name} из базы данных? ` +
+        `Вместе с аккаунтом будут удалены все его материалы (${activeUser?.materials_total ?? 0}) ` +
+        'и реакции на них. Это действие нельзя отменить.',
     };
-    setModal({ action, message: messages[action] });
+    setModal({
+      action,
+      title: action === 'delete' ? 'Удаление пользователя' : undefined,
+      message: messages[action],
+      danger: action === 'delete',
+      confirmLabel: action === 'delete' ? 'Удалить навсегда' : 'Подтвердить',
+    });
   }
 
   async function executeAction() {
@@ -126,6 +142,23 @@ const AdminUsersPage = () => {
     setPendingAction(action);
     setError('');
     setSuccess('');
+
+    if (action === 'delete') {
+      try {
+        const deletedName = activeUser?.full_name || activeUser?.username;
+        await deleteAdminUser(activeUserId);
+        setUsers((prev) => prev.filter((u) => u.id !== activeUserId));
+        setTotal((prev) => Math.max(0, prev - 1));
+        setActiveUserId(null);
+        setActiveUser(null);
+        setSuccess(`Пользователь ${deletedName} удалён.`);
+      } catch (err) {
+        setError(err.response?.data?.detail || 'Не удалось удалить пользователя.');
+      } finally {
+        setPendingAction(null);
+      }
+      return;
+    }
 
     const payload = {};
     if (action === 'make-admin') payload.role = 'admin';
@@ -156,7 +189,10 @@ const AdminUsersPage = () => {
     <section className="page-shell">
       {modal && (
         <ConfirmModal
+          title={modal.title}
           message={modal.message}
+          confirmLabel={modal.confirmLabel}
+          danger={modal.danger}
           onConfirm={executeAction}
           onCancel={() => setModal(null)}
         />
@@ -315,6 +351,21 @@ const AdminUsersPage = () => {
                     Разблокировать
                   </button>
                 )}
+              </div>
+
+              <div className="admin-user-danger">
+                <p className="caps-label">Опасная зона</p>
+                <p className="profile-muted">
+                  Полное удаление аккаунта и всех его материалов. Действие необратимо.
+                </p>
+                <button
+                  type="button"
+                  className="button button--danger"
+                  disabled={Boolean(pendingAction) || activeUser.id === user?.id}
+                  onClick={() => askAction('delete')}
+                >
+                  {activeUser.id === user?.id ? 'Нельзя удалить себя' : 'Удалить пользователя'}
+                </button>
               </div>
             </>
           )}
