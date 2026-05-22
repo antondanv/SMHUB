@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic import Field, AliasChoices, field_validator
@@ -47,6 +48,25 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
+
+    @property
+    def on_vercel(self) -> bool:
+        """Запущены ли мы внутри Vercel-деплоя.
+
+        Vercel всегда выставляет ``VERCEL=1`` в окружении функции. Локально
+        (dev-сервер, docker) этой переменной нет, поэтому флаг удобно
+        использовать, чтобы отличать «боевой» деплой от локального стенда.
+        """
+        return os.environ.get("VERCEL") == "1"
+
+    @property
+    def seed_demo_metrics(self) -> bool:
+        """Заполнять ли seed-материалы накрученными метриками.
+
+        Локально оставляем демонстрационные просмотры/лайки/рейтинги, а на
+        Vercel стартуем «с нуля», как на реальном деплое.
+        """
+        return not self.on_vercel
 
 
 settings = Settings()
