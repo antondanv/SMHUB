@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
-import { forgotPassword, registerUser } from '../api/authApi';
+import { forgotPassword, registerUser, resendConfirmation } from '../api/authApi';
 import { useAuth } from '../context/useAuth';
 import heroImage from '../assets/hero.png';
 import { PASSWORD_HINT, validatePasswordWithConfirmation } from '../utils/password';
@@ -30,11 +30,6 @@ const initialRegisterForm = {
 
 const initialForgotForm = {
   email: '',
-  username: '',
-  last_name: '',
-  first_name: '',
-  new_password: '',
-  new_password_confirm: '',
 };
 
 function normalizeValue(value) {
@@ -147,6 +142,8 @@ const LoginPage = ({ defaultMode = 'login' }) => {
   const [programs, setPrograms] = useState([]);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [isResendingConfirmation, setIsResendingConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -173,6 +170,7 @@ const LoginPage = ({ defaultMode = 'login' }) => {
     setMode(nextMode);
     setError('');
     setInfo('');
+    setNeedsConfirmation(false);
   }
 
   function handleChange(event) {
@@ -221,12 +219,18 @@ const LoginPage = ({ defaultMode = 'login' }) => {
   async function handleLoginSubmit(event) {
     event.preventDefault();
     setError('');
+    setInfo('');
+    setNeedsConfirmation(false);
     setIsSubmitting(true);
 
     try {
       await login(loginForm);
       navigate('/');
     } catch (requestError) {
+      const status = requestError.response?.status;
+      if (status === 403) {
+        setNeedsConfirmation(true);
+      }
       setError(
         requestError.response?.data?.detail || 'Не удалось войти. Проверьте email и пароль.'
       );
@@ -235,37 +239,40 @@ const LoginPage = ({ defaultMode = 'login' }) => {
     }
   }
 
+  async function handleResendConfirmation() {
+    if (!loginForm.email) {
+      return;
+    }
+
+    setIsResendingConfirmation(true);
+    setInfo('');
+    try {
+      await resendConfirmation({ email: loginForm.email });
+      setInfo('Если такой email зарегистрирован, мы отправили новое письмо.');
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.detail || 'Не удалось отправить письмо. Попробуйте позже.'
+      );
+    } finally {
+      setIsResendingConfirmation(false);
+    }
+  }
+
   async function handleForgotSubmit(event) {
     event.preventDefault();
     setError('');
     setInfo('');
-
-    const passwordError = validatePasswordWithConfirmation(
-      forgotForm.new_password,
-      forgotForm.new_password_confirm
-    );
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      await forgotPassword({
-        email: forgotForm.email,
-        username: forgotForm.username,
-        last_name: forgotForm.last_name,
-        first_name: forgotForm.first_name,
-        new_password: forgotForm.new_password,
-      });
+      await forgotPassword({ email: forgotForm.email });
+      setInfo(
+        'Если такой email зарегистрирован, мы отправили письмо со ссылкой для сброса пароля.'
+      );
       setForgotForm(initialForgotForm);
-      setLoginForm((currentForm) => ({ ...currentForm, email: forgotForm.email }));
-      setMode('login');
-      setInfo('Пароль изменён. Войдите с новым паролем.');
     } catch (requestError) {
       setError(
-        requestError.response?.data?.detail || 'Не удалось сбросить пароль. Проверьте данные.'
+        requestError.response?.data?.detail || 'Не удалось отправить письмо. Попробуйте позже.'
       );
     } finally {
       setIsSubmitting(false);
@@ -319,11 +326,12 @@ const LoginPage = ({ defaultMode = 'login' }) => {
         email: registerForm.email,
         password: registerForm.password,
       });
-      await login({
-        email: registerForm.email,
-        password: registerForm.password,
-      });
-      navigate('/');
+      setLoginForm((currentForm) => ({ ...currentForm, email: registerForm.email }));
+      setRegisterForm(initialRegisterForm);
+      setMode('login');
+      setInfo(
+        'Аккаунт создан. Мы отправили письмо для подтверждения email — после подтверждения сможете войти.'
+      );
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Не удалось создать аккаунт.');
     } finally {
@@ -406,11 +414,9 @@ const LoginPage = ({ defaultMode = 'login' }) => {
           {error ? <p className="form-error">{error}</p> : null}
 
           {isForgot ? (
-            <form className="form-grid form-grid--two auth-form" onSubmit={handleForgotSubmit}>
+            <form className="form-grid auth-form" onSubmit={handleForgotSubmit}>
               <p className="hero-copy form-field--wide" style={{ marginTop: 0 }}>
-                Так как почтовый сервис не подключён, восстановление выполняется по
-                личным данным: укажите email, имя пользователя и ФИО из вашего
-                аккаунта.
+                Введите email вашего аккаунта — мы отправим ссылку для сброса пароля.
               </p>
 
               <label className="form-field--wide">
@@ -425,67 +431,8 @@ const LoginPage = ({ defaultMode = 'login' }) => {
                 />
               </label>
 
-              <label className="form-field--wide">
-                Имя пользователя
-                <input
-                  type="text"
-                  name="username"
-                  value={forgotForm.username}
-                  onChange={handleChange}
-                  placeholder="Например, ivan_21"
-                  required
-                />
-              </label>
-
-              <label>
-                Фамилия
-                <input
-                  type="text"
-                  name="last_name"
-                  value={forgotForm.last_name}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-
-              <label>
-                Имя
-                <input
-                  type="text"
-                  name="first_name"
-                  value={forgotForm.first_name}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-
-              <label className="form-field--wide">
-                Новый пароль
-                <input
-                  type="password"
-                  name="new_password"
-                  value={forgotForm.new_password}
-                  onChange={handleChange}
-                  placeholder="Минимум 8 символов"
-                  required
-                />
-                <small>{PASSWORD_HINT}</small>
-              </label>
-
-              <label className="form-field--wide">
-                Подтверждение пароля
-                <input
-                  type="password"
-                  name="new_password_confirm"
-                  value={forgotForm.new_password_confirm}
-                  onChange={handleChange}
-                  placeholder="Повторите новый пароль"
-                  required
-                />
-              </label>
-
-              <button className="button button--primary form-button--wide" type="submit">
-                {isSubmitting ? 'Сбрасываем...' : 'Задать новый пароль'}
+              <button className="button button--primary form-button--wide" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Отправляем...' : 'Отправить ссылку'}
               </button>
 
               <button
@@ -537,6 +484,17 @@ const LoginPage = ({ defaultMode = 'login' }) => {
               <button className="button button--primary form-button--wide" type="submit">
                 {isSubmitting ? 'Входим...' : 'Войти'}
               </button>
+
+              {needsConfirmation ? (
+                <button
+                  className="button button--ghost form-button--wide"
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={isResendingConfirmation || !loginForm.email}
+                >
+                  {isResendingConfirmation ? 'Отправляем...' : 'Отправить письмо подтверждения заново'}
+                </button>
+              ) : null}
 
               <button
                 className="auth-link-button form-field--wide"

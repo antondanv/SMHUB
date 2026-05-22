@@ -21,6 +21,7 @@ from app.models.rating import Rating
 from app.models.user_event import UserEvent
 from app.models.report import Report
 from app.models.audit_log import AuditLog
+from app.models.email_token import EmailToken
 
 __all__ = [
     "UserRoleEnum",
@@ -44,4 +45,5 @@ __all__ = [
     "UserEvent",
     "Report",
     "AuditLog",
+    "EmailToken",
 ]

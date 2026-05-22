@@ -36,16 +36,13 @@ class UserLogin(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    """Сброс пароля по личным данным (без e-mail-подтверждения).
-
-    Пользователь подтверждает владение аккаунтом, указывая e-mail, имя
-    пользователя и ФИО — при полном совпадении задаётся новый пароль.
-    """
+    """Запрос ссылки на сброс пароля по email."""
 
     email: str = Field(max_length=255)
-    username: str = Field(min_length=3, max_length=100)
-    last_name: str = Field(max_length=255)
-    first_name: str = Field(max_length=255)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=128)
     new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
 
     @field_validator("new_password")
@@ -54,27 +51,35 @@ class ForgotPasswordRequest(BaseModel):
         return validate_password_strength(value)
 
 
+class EmailConfirmRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=128)
+
+
+class ResendConfirmationRequest(BaseModel):
+    email: str = Field(max_length=255)
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    
+
 
 class AuthUserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     email: str
     username: str
-    
+
     last_name: str
     first_name: str
     middle_name: str | None
-    
+
     role_id: int
     role_name: str | None
     is_active: bool
-    
+    email_confirmed: bool
+
     course_id: int | None
     program_id: int | None
     group_name: str | None
-    

@@ -23,6 +23,12 @@ class User(Base):
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    email_confirmed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
+    )
+    email_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     course_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("courses.id", ondelete="SET NULL"),

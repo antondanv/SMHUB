@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -68,36 +70,42 @@ def create_user_with_role(
     db: Session,
     user_data: UserRegister,
     role_name: str,
+    *,
+    email_confirmed: bool = False,
 ) -> User:
     if get_user_by_email(db, user_data.email) is not None:
         raise ValueError("Email already exists")
-    
+
     if get_user_by_username(db, user_data.username) is not None:
         raise ValueError("Username already exists")
 
     validate_course_id(db, user_data.course_id)
     validate_program_id(db, user_data.program_id)
-    
+
     role = get_role(db, role_name)
-    
+
+    confirmed_at = datetime.now(timezone.utc) if email_confirmed else None
+
     user = User(
         email=user_data.email.strip().lower(),
         username=user_data.username.strip(),
-        
+
         hashed_password=hash_password(user_data.password),
 
         last_name=user_data.last_name.strip(),
         first_name=user_data.first_name.strip(),
         middle_name=user_data.middle_name.strip() if user_data.middle_name else None,
-        
+
         role_id=role.id,
         is_active=True,
-        
+        email_confirmed=email_confirmed,
+        email_confirmed_at=confirmed_at,
+
         course_id=user_data.course_id,
         program_id=user_data.program_id,
         group_name=user_data.group_name.strip() if user_data.group_name else None,
     )
-    
+
     db.add(user)
 
     try:
@@ -105,47 +113,25 @@ def create_user_with_role(
     except IntegrityError as exc:
         db.rollback()
         raise ValueError("Failed to create user") from exc
-    
+
     db.refresh(user)
-    
+
     return user
 
 
 def create_user(db: Session, user_data: UserRegister) -> User:
     return create_user_with_role(db, user_data, DEFAULT_USER_ROLE)
 
-def reset_password_by_identity(
-    db: Session,
-    *,
-    email: str,
-    username: str,
-    last_name: str,
-    first_name: str,
-    new_password: str,
-) -> bool:
-    """Сбросить пароль, подтвердив владение аккаунтом личными данными.
 
-    Возвращает ``True`` при успешном сбросе. Сравнение регистронезависимое и
-    без учёта окружающих пробелов. Не раскрывает, какое именно поле не совпало.
-    """
-    user = get_user_by_email(db, email)
-
-    if user is None:
-        return False
-
-    matches = (
-        user.username.strip().lower() == username.strip().lower()
-        and user.last_name.strip().lower() == last_name.strip().lower()
-        and user.first_name.strip().lower() == first_name.strip().lower()
-    )
-
-    if not matches:
-        return False
-
+def set_password(db: Session, user: User, new_password: str) -> None:
     user.hashed_password = hash_password(new_password)
-    db.commit()
+    db.flush()
 
-    return True
+
+def mark_email_confirmed(db: Session, user: User) -> None:
+    user.email_confirmed = True
+    user.email_confirmed_at = datetime.now(timezone.utc)
+    db.flush()
 
 
 def change_password(

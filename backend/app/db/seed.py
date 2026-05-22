@@ -1933,6 +1933,7 @@ def _get_or_create_editor(session) -> User:
         middle_name=None,
         role_id=student_role.id,
         is_active=True,
+        email_confirmed=True,
         course_id=course.id,
         program_id=program.id,
         group_name=None,
