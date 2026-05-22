@@ -22,6 +22,18 @@ export async function loginUser(loginData) {
   return response.data;
 }
 
+export async function forgotPassword(payload) {
+  const response = await apiClient.post('/auth/forgot-password', payload);
+
+  return response.data;
+}
+
+export async function changePassword(payload) {
+  const response = await apiClient.post('/users/me/password', payload);
+
+  return response.data;
+}
+
 export async function getCurrentUser() {
   const response = await apiClient.get('/auth/me');
 

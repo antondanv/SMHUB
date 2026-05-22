@@ -55,21 +55,24 @@ def ensure_first_admin_exists(db: Session) -> User | None:
 
     from app.services.auth_service import create_user_with_role
 
-    return create_user_with_role(
-        db,
-        UserRegister(
-            email=first_admin_email,
-            username=_resolve_first_admin_username(first_admin_email),
-            password=first_admin_password,
-            last_name="Bootstrap",
-            first_name="Admin",
-            middle_name=None,
-            course_id=None,
-            program_id=None,
-            group_name=None,
-        ),
-        "admin",
+    # Пароль первого админа задаёт оператор через окружение (например, простой
+    # FIRST_ADMIN_PASSWORD=111111 для локального стенда). Он не проходит через
+    # форму регистрации, поэтому намеренно НЕ подчиняется пользовательской
+    # политике паролей — иначе bootstrap на чистой базе падал бы. Используем
+    # ``model_construct``, чтобы пропустить валидацию схемы.
+    admin_payload = UserRegister.model_construct(
+        email=first_admin_email,
+        username=_resolve_first_admin_username(first_admin_email),
+        password=first_admin_password,
+        last_name="Bootstrap",
+        first_name="Admin",
+        middle_name=None,
+        course_id=None,
+        program_id=None,
+        group_name=None,
     )
+
+    return create_user_with_role(db, admin_payload, "admin")
 
 
 def report_first_admin_status() -> None:

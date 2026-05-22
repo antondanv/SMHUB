@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import { changePassword } from '../api/authApi';
 import CourseSelect from '../components/selectors/CourseSelect';
 import ProgramSelect from '../components/selectors/ProgramSelect';
 import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
+import { PASSWORD_HINT, validatePasswordWithConfirmation } from '../utils/password';
+
+const initialPasswordForm = {
+  current_password: '',
+  new_password: '',
+  new_password_confirm: '',
+};
 
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
@@ -29,6 +37,11 @@ const ProfilePage = () => {
     program_id: '',
     group_name: '',
   });
+
+  const [passwordForm, setPasswordForm] = useState(initialPasswordForm);
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,6 +76,46 @@ const ProfilePage = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    const validationError = validatePasswordWithConfirmation(
+      passwordForm.new_password,
+      passwordForm.new_password_confirm
+    );
+    if (validationError) {
+      setPasswordError(validationError);
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      await changePassword({
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password,
+      });
+      setPasswordForm(initialPasswordForm);
+      setPasswordSuccess('Пароль успешно изменён.');
+    } catch (err) {
+      setPasswordError(
+        err.response?.data?.detail || 'Не удалось изменить пароль.'
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -257,6 +310,62 @@ const ProfilePage = () => {
 
             <button type="submit" className="button button--primary form-button--wide">
               Сохранить изменения
+            </button>
+          </form>
+
+          <div className="section-heading" style={{ marginTop: 'var(--space-lg)' }}>
+            <p className="caps-label">Безопасность</p>
+            <h2>Смена пароля</h2>
+            <p className="hero-copy">Введите текущий пароль и задайте новый.</p>
+          </div>
+
+          {passwordSuccess && <p className="form-success">{passwordSuccess}</p>}
+          {passwordError && <p className="form-error">{passwordError}</p>}
+
+          <form onSubmit={handlePasswordSubmit} className="form-grid form-grid--two profile-form">
+            <label className="form-field--wide">
+              Текущий пароль
+              <input
+                type="password"
+                name="current_password"
+                value={passwordForm.current_password}
+                onChange={handlePasswordChange}
+                placeholder="Введите текущий пароль"
+                required
+              />
+            </label>
+
+            <label className="form-field--wide">
+              Новый пароль
+              <input
+                type="password"
+                name="new_password"
+                value={passwordForm.new_password}
+                onChange={handlePasswordChange}
+                placeholder="Минимум 8 символов"
+                required
+              />
+              <small>{PASSWORD_HINT}</small>
+            </label>
+
+            <label className="form-field--wide">
+              Подтверждение нового пароля
+              <input
+                type="password"
+                name="new_password_confirm"
+                value={passwordForm.new_password_confirm}
+                onChange={handlePasswordChange}
+                placeholder="Повторите новый пароль"
+                required
+              />
+            </label>
+
+            <button
+              type="submit"
+              className="button button--primary form-button--wide"
+              disabled={isChangingPassword}
+            >
+              {isChangingPassword ? 'Меняем пароль...' : 'Изменить пароль'}
             </button>
           </form>
         </div>

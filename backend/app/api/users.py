@@ -17,8 +17,8 @@ from app.models.material import Material
 from app.models.program import Program
 from app.models.user import User
 from app.schemas.material import MaterialListResponse
-from app.schemas.user import UserProfileResponse, UserProfileUpdate
-from app.services.auth_service import get_user_by_username
+from app.schemas.user import PasswordChange, UserProfileResponse, UserProfileUpdate
+from app.services.auth_service import change_password, get_user_by_username
 
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -80,6 +80,28 @@ def get_my_profile(
     current_user: User = Depends(get_current_user),
 ) -> User:
     return current_user
+
+
+@router.post("/me/password", status_code=status.HTTP_200_OK)
+def change_my_password(
+    payload: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    changed = change_password(
+        db,
+        current_user,
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+    )
+
+    if not changed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Текущий пароль указан неверно.",
+        )
+
+    return {"detail": "Пароль успешно изменён."}
 
 
 @router.patch("/me", response_model=UserProfileResponse)

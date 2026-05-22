@@ -10,8 +10,20 @@ from app.core.config import settings
 from app.core.security import create_access_token, decode_access_token
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.auth import AdminRegister, AuthUserResponse, Token, UserLogin, UserRegister
-from app.services.auth_service import authenticate_user, create_user, create_user_with_role
+from app.schemas.auth import (
+    AdminRegister,
+    AuthUserResponse,
+    ForgotPasswordRequest,
+    Token,
+    UserLogin,
+    UserRegister,
+)
+from app.services.auth_service import (
+    authenticate_user,
+    create_user,
+    create_user_with_role,
+    reset_password_by_identity,
+)
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -153,6 +165,29 @@ def login(
     record_event(db, "login", user_id=user.id)
     db.commit()
     return Token(access_token=access_token)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    reset_ok = reset_password_by_identity(
+        db,
+        email=payload.email,
+        username=payload.username,
+        last_name=payload.last_name,
+        first_name=payload.first_name,
+        new_password=payload.new_password,
+    )
+
+    if not reset_ok:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Данные не совпадают ни с одним аккаунтом. Проверьте email, имя пользователя и ФИО.",
+        )
+
+    return {"detail": "Пароль успешно изменён. Теперь можно войти с новым паролем."}
 
 
 @router.get("/me", response_model=AuthUserResponse)

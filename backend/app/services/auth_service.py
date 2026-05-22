@@ -114,6 +114,57 @@ def create_user_with_role(
 def create_user(db: Session, user_data: UserRegister) -> User:
     return create_user_with_role(db, user_data, DEFAULT_USER_ROLE)
 
+def reset_password_by_identity(
+    db: Session,
+    *,
+    email: str,
+    username: str,
+    last_name: str,
+    first_name: str,
+    new_password: str,
+) -> bool:
+    """Сбросить пароль, подтвердив владение аккаунтом личными данными.
+
+    Возвращает ``True`` при успешном сбросе. Сравнение регистронезависимое и
+    без учёта окружающих пробелов. Не раскрывает, какое именно поле не совпало.
+    """
+    user = get_user_by_email(db, email)
+
+    if user is None:
+        return False
+
+    matches = (
+        user.username.strip().lower() == username.strip().lower()
+        and user.last_name.strip().lower() == last_name.strip().lower()
+        and user.first_name.strip().lower() == first_name.strip().lower()
+    )
+
+    if not matches:
+        return False
+
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+
+    return True
+
+
+def change_password(
+    db: Session,
+    user: User,
+    *,
+    current_password: str,
+    new_password: str,
+) -> bool:
+    """Сменить пароль авторизованного пользователя по текущему паролю."""
+    if not verify_password(current_password, user.hashed_password):
+        return False
+
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+
+    return True
+
+
 def authenticate_user(db: Session, login_data: UserLogin) -> User | None:
     user = get_user_by_email(db, login_data.email)
     

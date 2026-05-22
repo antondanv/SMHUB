@@ -1,19 +1,30 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.core.security import (
+    PASSWORD_MAX_LENGTH,
+    PASSWORD_MIN_LENGTH,
+    validate_password_strength,
+)
 
 
 class UserRegister(BaseModel):
     email: str = Field(max_length=255)
     username: str = Field(min_length=3, max_length=100)
-    password: str = Field(min_length=6, max_length=128)
-    
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+
     last_name: str = Field(max_length=255)
     first_name: str = Field(max_length=255)
     middle_name: str | None = Field(default=None, max_length=255)
-    
+
     course_id: int | None = None
     program_id: int | None = None
     group_name: str | None = Field(default=None, max_length=100)
-    
+
+    @field_validator("password")
+    @classmethod
+    def _check_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
 
 class AdminRegister(UserRegister):
     admin_secret: str = Field(min_length=1, max_length=255)
@@ -22,7 +33,26 @@ class AdminRegister(UserRegister):
 class UserLogin(BaseModel):
     email: str
     password: str
-    
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Сброс пароля по личным данным (без e-mail-подтверждения).
+
+    Пользователь подтверждает владение аккаунтом, указывая e-mail, имя
+    пользователя и ФИО — при полном совпадении задаётся новый пароль.
+    """
+
+    email: str = Field(max_length=255)
+    username: str = Field(min_length=3, max_length=100)
+    last_name: str = Field(max_length=255)
+    first_name: str = Field(max_length=255)
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+
+    @field_validator("new_password")
+    @classmethod
+    def _check_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
 
 class Token(BaseModel):
     access_token: str
