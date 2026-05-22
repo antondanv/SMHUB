@@ -27,6 +27,10 @@ export async function updateAdminUser(userId, data) {
   return response.data;
 }
 
+export async function deleteAdminUser(userId) {
+  await apiClient.delete(`/admin/users/${userId}`);
+}
+
 // References CRUD
 export async function createReference(type, data) {
   const response = await apiClient.post(`/admin/${type}`, data);

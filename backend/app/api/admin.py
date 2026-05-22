@@ -1,29 +1,36 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
-from sqlalchemy import cast, func, select, Date
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import cast, delete as sa_delete, func, select, Date
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.auth import get_current_user
 from app.api.materials_common import full_name_for_user, is_privileged_user
 from app.db.database import get_db
 from app.services import audit_log
+from app.models.comment import Comment
 from app.models.course import Course
 from app.models.enums import MaterialStatus as MaterialStatusEnum
+from app.models.favorite import Favorite
+from app.models.like import Like
 from app.models.material import Material
 from app.models.material_status import MaterialStatus
 from app.models.material_type import MaterialType
 from app.models.program import Program
+from app.models.rating import Rating
 from app.models.role import Role
 from app.models.subject import Subject
 from app.models.user import User
 from app.models.user_event import UserEvent
 
+
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -431,6 +438,98 @@ def update_user(
         "role": user.role.name if user.role else "—",
         "is_active": user.is_active,
     }
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_admin(current_user)
+
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нельзя удалить собственный аккаунт",
+        )
+
+    user = db.scalar(select(User).options(joinedload(User.role)).where(User.id == user_id))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Не даём удалить последнего администратора, иначе систему некому будет вести.
+    if user.role and user.role.name == "admin":
+        admin_count = db.scalar(
+            select(func.count())
+            .select_from(User)
+            .join(Role, Role.id == User.role_id)
+            .where(Role.name == "admin")
+        ) or 0
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Нельзя удалить последнего администратора",
+            )
+
+    # Материалы пользователя удаляем каскадом вместе с чужими реакциями на них.
+    materials = db.scalars(select(Material).where(Material.author_id == user_id)).all()
+    material_ids = [material.id for material in materials]
+    file_paths = [BASE_DIR / material.file_url for material in materials]
+
+    username = user.username
+    user_email = user.email
+
+    try:
+        if material_ids:
+            db.execute(sa_delete(Comment).where(Comment.material_id.in_(material_ids)))
+            db.execute(sa_delete(Like).where(Like.material_id.in_(material_ids)))
+            db.execute(sa_delete(Favorite).where(Favorite.material_id.in_(material_ids)))
+            db.execute(sa_delete(Rating).where(Rating.material_id.in_(material_ids)))
+            # featured_items и moderation_log на материалы каскадятся на уровне БД.
+            db.execute(sa_delete(Material).where(Material.id.in_(material_ids)))
+
+        # Собственные реакции пользователя на чужие материалы.
+        db.execute(sa_delete(Comment).where(Comment.user_id == user_id))
+        db.execute(sa_delete(Like).where(Like.user_id == user_id))
+        db.execute(sa_delete(Favorite).where(Favorite.user_id == user_id))
+        db.execute(sa_delete(Rating).where(Rating.user_id == user_id))
+
+        # Ссылки в user_events / audit_log / moderation_log / reports / featured_items
+        # обнуляются автоматически (ondelete=SET NULL).
+        audit_log.record(
+            db,
+            actor_id=current_user.id,
+            action="user.delete",
+            target_type="user",
+            target_id=user_id,
+            payload={
+                "username": username,
+                "email": user_email,
+                "materials_deleted": len(material_ids),
+            },
+            request=request,
+        )
+
+        db.delete(user)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user",
+        ) from exc
+
+    # Чистим файлы материалов уже после успешной транзакции. На read-only ФС
+    # (Vercel) unlink может бросить OSError — это не должно ронять ответ.
+    for file_path in file_paths:
+        try:
+            file_path.unlink(missing_ok=True)
+            sidecar = file_path.with_suffix(file_path.suffix + ".preview.json")
+            sidecar.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _check_material_count(db: Session, field, value: int) -> int:
