@@ -83,6 +83,8 @@ const MaterialDetailPage = () => {
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
+  const [shareError, setShareError] = useState('');
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState(null);
   const [actionMessage, setActionMessage] = useState('');
@@ -217,6 +219,31 @@ const MaterialDetailPage = () => {
       );
     } finally {
       setIsDownloadPending(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    const shareUrl = window.location.href;
+    setShareError('');
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+      setIsLinkCopied(true);
+      window.setTimeout(() => setIsLinkCopied(false), 2000);
+    } catch {
+      setShareError('Не удалось скопировать ссылку');
     }
   }
 
@@ -391,6 +418,18 @@ const MaterialDetailPage = () => {
                 >
                   {isDownloadPending ? 'Скачиваем...' : 'Скачать'}
                 </button>
+                <button
+                  className={`button button--secondary share-button${isLinkCopied ? ' share-button--copied' : ''}`}
+                  type="button"
+                  onClick={handleCopyLink}
+                  aria-live="polite"
+                >
+                  <AppIcon name={isLinkCopied ? 'check' : 'link'} size={18} />
+                  <span>{isLinkCopied ? 'Скопировано' : 'Поделиться'}</span>
+                </button>
+                {shareError && (
+                  <span className="share-button__error">{shareError}</span>
+                )}
                 <LikeButton
                   materialId={material.id}
                   initialCount={material.likes_count}

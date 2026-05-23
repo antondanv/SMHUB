@@ -2362,6 +2362,33 @@ small {
   width: 100%;
 }
 
+.share-button {
+  gap: var(--space-xs);
+}
+
+.share-button svg {
+  flex-shrink: 0;
+}
+
+.share-button--copied {
+  color: var(--on-primary);
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.share-button--copied:hover {
+  color: var(--on-primary);
+  background: #15803d;
+  border-color: #15803d;
+}
+
+.share-button__error {
+  margin-top: calc(var(--space-xs) * -0.25);
+  color: var(--error);
+  font-size: var(--fs-label-sm);
+  text-align: center;
+}
+
 .preview-card__toolbar {
   display: flex;
   align-items: center;
