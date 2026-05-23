@@ -16,8 +16,16 @@
       "destination": "backend/app/main.py"
     },
     {
-      "source": "/(.*)",
+      "source": "/assets/(.*)",
+      "destination": "frontend/assets/$1"
+    },
+    {
+      "source": "/(.+\\.(?:js|css|map|json|txt|ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|otf|eot|mp4|webm|wasm|pdf))",
       "destination": "frontend/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "frontend/index.html"
     }
   ],
   "env": {
