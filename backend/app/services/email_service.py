@@ -87,11 +87,12 @@ def _send(to: str, subject: str, text: str, html: str) -> None:
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
             body = response.read().decode("utf-8", errors="replace")
-            logger.info("Resend OK to=%s status=%s body=%s", to, response.status, body)
+            print(f"[Resend OK] to={to} status={response.status} body={body}", flush=True)
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
-        logger.error("Resend HTTP %s for %s (subject=%s): %s", exc.code, to, subject, body)
-    except Exception:
+        print(f"[Resend HTTP {exc.code}] to={to} subject={subject}: {body}", flush=True)
+    except Exception as exc:
+        print(f"[Resend ERROR] to={to} subject={subject}: {exc!r}", flush=True)
         logger.exception("Resend send failed for %s (subject=%s)", to, subject)
 
 
