@@ -6,8 +6,6 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote
 
-from fastapi import BackgroundTasks
-
 from app.core.config import settings
 
 
@@ -97,11 +95,11 @@ def _send(to: str, subject: str, text: str, html: str) -> None:
         logger.exception("Resend send failed for %s (subject=%s)", to, subject)
 
 
-def send_confirm_email(background_tasks: BackgroundTasks, to: str, raw_token: str) -> None:
+def send_confirm_email(background_tasks, to: str, raw_token: str) -> None:
     subject, text, html = _render_confirm(_confirm_link(raw_token))
-    background_tasks.add_task(_send, to, subject, text, html)
+    _send(to, subject, text, html)
 
 
-def send_reset_email(background_tasks: BackgroundTasks, to: str, raw_token: str) -> None:
+def send_reset_email(background_tasks, to: str, raw_token: str) -> None:
     subject, text, html = _render_reset(_reset_link(raw_token))
-    background_tasks.add_task(_send, to, subject, text, html)
+    _send(to, subject, text, html)
