@@ -81,6 +81,8 @@ def _send(to: str, subject: str, text: str, html: str) -> None:
         headers={
             "Authorization": f"Bearer {settings.resend_api_key}",
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "SMHUB/1.0 (+https://smhub.vercel.app)",
         },
     )
 
