@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import json
 import logging
-import smtplib
-import ssl
-from email.message import EmailMessage
+import urllib.error
+import urllib.request
 from urllib.parse import quote
 
 from fastapi import BackgroundTasks
@@ -12,6 +12,8 @@ from app.core.config import settings
 
 
 logger = logging.getLogger(__name__)
+
+RESEND_API_URL = "https://api.resend.com/emails"
 
 
 def _confirm_link(raw_token: str) -> str:
@@ -58,42 +60,48 @@ def _render_reset(link: str) -> tuple[str, str, str]:
     return subject, text, html
 
 
-def _send_smtp(to: str, subject: str, text: str, html: str) -> None:
-    if not settings.smtp_host:
+def _send(to: str, subject: str, text: str, html: str) -> None:
+    if not settings.resend_api_key:
         print(
             f"\n[SMHUB:email-dev] to={to} subject={subject}\n{text}\n",
             flush=True,
         )
         return
 
-    message = EmailMessage()
-    message["From"] = settings.smtp_from or settings.smtp_user
-    message["To"] = to
-    message["Subject"] = subject
-    message.set_content(text)
-    message.add_alternative(html, subtype="html")
+    payload = json.dumps({
+        "from": settings.resend_from,
+        "to": [to],
+        "subject": subject,
+        "text": text,
+        "html": html,
+    }).encode("utf-8")
+
+    request = urllib.request.Request(
+        RESEND_API_URL,
+        data=payload,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {settings.resend_api_key}",
+            "Content-Type": "application/json",
+        },
+    )
 
     try:
-        if settings.smtp_use_tls:
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
-                smtp.starttls(context=ssl.create_default_context())
-                if settings.smtp_user:
-                    smtp.login(settings.smtp_user, settings.smtp_password)
-                smtp.send_message(message)
-        else:
-            with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
-                if settings.smtp_user:
-                    smtp.login(settings.smtp_user, settings.smtp_password)
-                smtp.send_message(message)
+        with urllib.request.urlopen(request, timeout=15) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            logger.info("Resend OK to=%s status=%s body=%s", to, response.status, body)
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+        logger.error("Resend HTTP %s for %s (subject=%s): %s", exc.code, to, subject, body)
     except Exception:
-        logger.exception("Failed to send email to %s (subject=%s)", to, subject)
+        logger.exception("Resend send failed for %s (subject=%s)", to, subject)
 
 
 def send_confirm_email(background_tasks: BackgroundTasks, to: str, raw_token: str) -> None:
     subject, text, html = _render_confirm(_confirm_link(raw_token))
-    background_tasks.add_task(_send_smtp, to, subject, text, html)
+    background_tasks.add_task(_send, to, subject, text, html)
 
 
 def send_reset_email(background_tasks: BackgroundTasks, to: str, raw_token: str) -> None:
     subject, text, html = _render_reset(_reset_link(raw_token))
-    background_tasks.add_task(_send_smtp, to, subject, text, html)
+    background_tasks.add_task(_send, to, subject, text, html)
