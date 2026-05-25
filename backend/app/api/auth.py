@@ -67,7 +67,9 @@ def get_current_user(
         )
         
     user = db.scalar(
-        select(User).options(joinedload(User.role)).where(User.id == int(user_id)),
+        select(User)
+        .options(joinedload(User.role), joinedload(User.requested_role))
+        .where(User.id == int(user_id)),
     )
     
     if user is None:
@@ -103,7 +105,9 @@ def get_optional_user(
         return None
 
     user = db.scalar(
-        select(User).options(joinedload(User.role)).where(User.id == int(user_id)),
+        select(User)
+        .options(joinedload(User.role), joinedload(User.requested_role))
+        .where(User.id == int(user_id)),
     )
 
     if user is None or not user.is_active:

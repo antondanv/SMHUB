@@ -240,6 +240,7 @@ class UserListItem(BaseModel):
     email: str
     full_name: str
     role: str
+    requested_role: str | None = None
     is_active: bool
     materials_count: int
     created_at: str
@@ -258,6 +259,7 @@ class UserDetailResponse(BaseModel):
     email: str
     full_name: str
     role: str
+    requested_role: str | None = None
     is_active: bool
     created_at: str
     materials_total: int
@@ -276,6 +278,7 @@ def list_users(
     search: Optional[str] = Query(None),
     role: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
+    has_role_request: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
@@ -283,7 +286,9 @@ def list_users(
 ) -> UserListResponse:
     require_admin(current_user)
 
-    stmt = select(User).options(joinedload(User.role))
+    stmt = select(User).options(
+        joinedload(User.role), joinedload(User.requested_role)
+    )
 
     if search:
         like = f"%{search}%"
@@ -294,6 +299,10 @@ def list_users(
         stmt = stmt.join(Role, User.role_id == Role.id).where(Role.name == role)
     if is_active is not None:
         stmt = stmt.where(User.is_active.is_(is_active))
+    if has_role_request is True:
+        stmt = stmt.where(User.requested_role_id.is_not(None))
+    elif has_role_request is False:
+        stmt = stmt.where(User.requested_role_id.is_(None))
 
     total = len(db.scalars(stmt).all())
     offset = (page - 1) * per_page
@@ -313,6 +322,7 @@ def list_users(
             email=u.email,
             full_name=full_name_for_user(u),
             role=u.role.name if u.role else "—",
+            requested_role=u.requested_role.name if u.requested_role else None,
             is_active=u.is_active,
             materials_count=mat_counts.get(u.id, 0),
             created_at=u.created_at.isoformat(),
@@ -336,7 +346,11 @@ def get_user_detail(
 ) -> UserDetailResponse:
     require_admin(current_user)
 
-    user = db.scalar(select(User).options(joinedload(User.role)).where(User.id == user_id))
+    user = db.scalar(
+        select(User)
+        .options(joinedload(User.role), joinedload(User.requested_role))
+        .where(User.id == user_id)
+    )
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -357,6 +371,7 @@ def get_user_detail(
         email=user.email,
         full_name=full_name_for_user(user),
         role=user.role.name if user.role else "—",
+        requested_role=user.requested_role.name if user.requested_role else None,
         is_active=user.is_active,
         created_at=user.created_at.isoformat(),
         materials_total=db.scalar(
@@ -396,6 +411,8 @@ def update_user(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role not found")
         user.role_id = role.id
         user.role = role
+        user.requested_role_id = None
+        user.requested_role = None
 
     if data.is_active is not None:
         if user_id == current_user.id and not data.is_active:
@@ -437,6 +454,103 @@ def update_user(
         "username": user.username,
         "role": user.role.name if user.role else "—",
         "is_active": user.is_active,
+    }
+
+
+@router.post("/users/{user_id}/role-request/approve")
+def approve_role_request(
+    user_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_admin(current_user)
+
+    user = db.scalar(
+        select(User)
+        .options(joinedload(User.role), joinedload(User.requested_role))
+        .where(User.id == user_id)
+    )
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.requested_role_id is None or user.requested_role is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="У пользователя нет заявки на роль",
+        )
+
+    before_role = user.role.name if user.role else None
+    new_role = user.requested_role
+    user.role_id = new_role.id
+    user.role = new_role
+    user.requested_role_id = None
+    user.requested_role = None
+
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="user.role.request.approve",
+        target_type="user",
+        target_id=user.id,
+        payload={"before": before_role, "after": new_role.name, "username": user.username},
+        request=request,
+    )
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role.name if user.role else "—",
+        "requested_role": None,
+    }
+
+
+@router.post("/users/{user_id}/role-request/reject")
+def reject_role_request(
+    user_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_admin(current_user)
+
+    user = db.scalar(
+        select(User)
+        .options(joinedload(User.role), joinedload(User.requested_role))
+        .where(User.id == user_id)
+    )
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.requested_role_id is None or user.requested_role is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="У пользователя нет заявки на роль",
+        )
+
+    rejected_role_name = user.requested_role.name
+    user.requested_role_id = None
+    user.requested_role = None
+
+    audit_log.record(
+        db,
+        actor_id=current_user.id,
+        action="user.role.request.reject",
+        target_type="user",
+        target_id=user.id,
+        payload={"rejected_role": rejected_role_name, "username": user.username},
+        request=request,
+    )
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role.name if user.role else "—",
+        "requested_role": None,
     }
 
 

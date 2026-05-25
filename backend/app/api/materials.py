@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -16,6 +17,7 @@ from app.api.events import record_event
 from app.api.materials_common import (
     assert_material_is_visible,
     base_material_query,
+    can_publish_without_moderation,
     fetch_favorite_ids,
     get_material_or_404,
     get_status_or_500,
@@ -363,7 +365,8 @@ async def create_material(
 
     mime_type = resolve_mime_type(db, original_file_name, file.content_type)
 
-    if is_editorial:
+    publish_immediately = is_editorial or can_publish_without_moderation(current_user)
+    if publish_immediately:
         initial_status = get_status_or_500(db, MaterialStatusEnum.PUBLISHED)
     else:
         initial_status = get_status_or_500(db, MaterialStatusEnum.PENDING)
@@ -401,6 +404,7 @@ async def create_material(
         mime_type_id=mime_type.id,
         status_id=initial_status.id,
         is_editorial=is_editorial,
+        published_at=datetime.now(timezone.utc) if publish_immediately else None,
         file_url=str(Path("uploads") / "materials" / stored_file_name),
         file_name=original_file_name,
         file_size=file_size,

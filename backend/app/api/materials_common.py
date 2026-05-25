@@ -27,6 +27,11 @@ ROLE_NAMES_WITH_EXTENDED_ACCESS = {
     UserRole.ADMIN.value,
 }
 
+ROLES_PUBLISHING_WITHOUT_MODERATION = {
+    UserRole.ADMIN.value,
+    UserRole.TEACHER.value,
+}
+
 
 def full_name_for_user(user: User) -> str:
     parts = [user.last_name, user.first_name, user.middle_name]
@@ -38,6 +43,13 @@ def is_privileged_user(user: User | None) -> bool:
         return False
 
     return user.role.name in ROLE_NAMES_WITH_EXTENDED_ACCESS
+
+
+def can_publish_without_moderation(user: User | None) -> bool:
+    if user is None or user.role is None:
+        return False
+
+    return user.role.name in ROLES_PUBLISHING_WITHOUT_MODERATION
 
 
 def can_access_hidden_material(user: User | None, material: Material) -> bool:

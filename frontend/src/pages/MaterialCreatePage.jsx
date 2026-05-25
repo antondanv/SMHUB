@@ -8,7 +8,7 @@ import SubjectSelect from '../components/selectors/SubjectSelect';
 import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
 import { createMaterial } from '../api/materialsApi';
-import { isAdminUser } from '../utils/auth';
+import { isAdminUser, isTeacherUser } from '../utils/auth';
 
 function getErrorMessage(error) {
   const detail = error.response?.data?.detail;
@@ -385,6 +385,12 @@ const MaterialCreatePage = () => {
                 />
                 Опубликовать от редакции (без очереди модерации)
               </label>
+            )}
+
+            {isTeacherUser(user) && (
+              <p className="form-success form-field--wide">
+                Ваши материалы публикуются сразу, без очереди модерации.
+              </p>
             )}
 
             <button

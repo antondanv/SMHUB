@@ -22,6 +22,11 @@ class User(Base):
         ForeignKey("roles.id"),
         nullable=False,
     )
+    requested_role_id: Mapped[int | None] = mapped_column(
+        SmallInteger,
+        ForeignKey("roles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     email_confirmed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false", default=False
@@ -50,7 +55,12 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-    role: Mapped["Role"] = relationship(back_populates="users")
+    role: Mapped["Role"] = relationship(
+        back_populates="users", foreign_keys=[role_id]
+    )
+    requested_role: Mapped["Role | None"] = relationship(
+        foreign_keys=[requested_role_id]
+    )
     course: Mapped["Course"] = relationship(back_populates="users")
     program: Mapped["Program"] = relationship(back_populates="users")
     materials: Mapped[List["Material"]] = relationship(back_populates="author")
@@ -62,3 +72,7 @@ class User(Base):
     @property
     def role_name(self) -> str | None:
         return self.role.name if self.role is not None else None
+
+    @property
+    def requested_role_name(self) -> str | None:
+        return self.requested_role.name if self.requested_role is not None else None

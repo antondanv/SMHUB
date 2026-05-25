@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
-import { deleteAdminUser, getAdminUser, getAdminUsers, updateAdminUser } from '../api/adminApi';
+import {
+  approveRoleRequest,
+  deleteAdminUser,
+  getAdminUser,
+  getAdminUsers,
+  rejectRoleRequest,
+  updateAdminUser,
+} from '../api/adminApi';
 import { useAuth } from '../context/useAuth';
 import { isAdminUser } from '../utils/auth';
 
@@ -27,7 +34,11 @@ function ConfirmModal({ title, message, confirmLabel = 'Подтвердить',
   );
 }
 
-const ROLE_LABELS = { admin: 'Администратор', student: 'Студент' };
+const ROLE_LABELS = {
+  admin: 'Администратор',
+  teacher: 'Преподаватель',
+  student: 'Студент',
+};
 
 const AdminUsersPage = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -52,6 +63,7 @@ const AdminUsersPage = () => {
   const search = searchParams.get('search') || '';
   const roleFilter = searchParams.get('role') || '';
   const activeFilter = searchParams.get('is_active') || '';
+  const requestFilter = searchParams.get('has_role_request') || '';
   const page = Number(searchParams.get('page') || '1');
 
   function updateFilter(key, value) {
@@ -74,6 +86,7 @@ const AdminUsersPage = () => {
       if (search) params.search = search;
       if (roleFilter) params.role = roleFilter;
       if (activeFilter !== '') params.is_active = activeFilter === 'true';
+      if (requestFilter === 'true') params.has_role_request = true;
 
       try {
         const data = await getAdminUsers(params);
@@ -88,7 +101,7 @@ const AdminUsersPage = () => {
     }
 
     loadUsers();
-  }, [isAdmin, search, roleFilter, activeFilter, page]);
+  }, [isAdmin, search, roleFilter, activeFilter, requestFilter, page]);
 
   useEffect(() => {
     if (!activeUserId) {
@@ -116,9 +129,13 @@ const AdminUsersPage = () => {
 
   function askAction(action) {
     const name = activeUser?.full_name || activeUser?.username;
+    const requested = activeUser?.requested_role;
+    const requestedLabel = ROLE_LABELS[requested] || requested || 'роль';
     const messages = {
       'make-admin': `Назначить ${name} администратором?`,
       'make-student': `Снять права администратора у ${name}?`,
+      'approve-role': `Одобрить заявку ${name} на роль «${requestedLabel}»?`,
+      'reject-role': `Отклонить заявку ${name} на роль «${requestedLabel}»?`,
       'deactivate': `Заблокировать ${name}? Пользователь не сможет входить.`,
       'activate': `Разблокировать ${name}?`,
       'delete':
@@ -154,6 +171,33 @@ const AdminUsersPage = () => {
         setSuccess(`Пользователь ${deletedName} удалён.`);
       } catch (err) {
         setError(err.response?.data?.detail || 'Не удалось удалить пользователя.');
+      } finally {
+        setPendingAction(null);
+      }
+      return;
+    }
+
+    if (action === 'approve-role' || action === 'reject-role') {
+      try {
+        const result =
+          action === 'approve-role'
+            ? await approveRoleRequest(activeUserId)
+            : await rejectRoleRequest(activeUserId);
+        setActiveUser((prev) =>
+          prev ? { ...prev, role: result.role, requested_role: null } : prev
+        );
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === activeUserId ? { ...u, role: result.role, requested_role: null } : u
+          )
+        );
+        setSuccess(
+          action === 'approve-role'
+            ? 'Заявка на роль одобрена.'
+            : 'Заявка на роль отклонена.'
+        );
+      } catch (err) {
+        setError(err.response?.data?.detail || 'Не удалось обработать заявку.');
       } finally {
         setPendingAction(null);
       }
@@ -222,12 +266,20 @@ const AdminUsersPage = () => {
             <select value={roleFilter} onChange={(e) => updateFilter('role', e.target.value)}>
               <option value="">Все роли</option>
               <option value="admin">Администратор</option>
+              <option value="teacher">Преподаватель</option>
               <option value="student">Студент</option>
             </select>
             <select value={activeFilter} onChange={(e) => updateFilter('is_active', e.target.value)}>
               <option value="">Все статусы</option>
               <option value="true">Активные</option>
               <option value="false">Заблокированные</option>
+            </select>
+            <select
+              value={requestFilter}
+              onChange={(e) => updateFilter('has_role_request', e.target.value)}
+            >
+              <option value="">Все заявки</option>
+              <option value="true">Только заявки на роль</option>
             </select>
           </div>
 
@@ -256,7 +308,17 @@ const AdminUsersPage = () => {
                   >
                     <td><strong>{u.full_name || u.username}</strong><br /><span className="profile-muted">@{u.username}</span></td>
                     <td>{u.email}</td>
-                    <td><span className={`role-badge role-badge--${u.role}`}>{ROLE_LABELS[u.role] || u.role}</span></td>
+                    <td>
+                      <span className={`role-badge role-badge--${u.role}`}>{ROLE_LABELS[u.role] || u.role}</span>
+                      {u.requested_role ? (
+                        <>
+                          {' '}
+                          <span className="role-badge role-badge--pending" title="Заявка на роль">
+                            Заявка: {ROLE_LABELS[u.requested_role] || u.requested_role}
+                          </span>
+                        </>
+                      ) : null}
+                    </td>
                     <td>
                       <span className={u.is_active ? 'status-active' : 'status-blocked'}>
                         {u.is_active ? 'Активен' : 'Заблокирован'}
@@ -311,17 +373,32 @@ const AdminUsersPage = () => {
                 </div>
               </div>
 
-              <div className="action-row action-row--column">
-                {activeUser.role === 'student' ? (
+              {activeUser.requested_role ? (
+                <div className="action-row action-row--column admin-user-request">
+                  <p className="profile-muted">
+                    Заявка на роль: <strong>{ROLE_LABELS[activeUser.requested_role] || activeUser.requested_role}</strong>
+                  </p>
                   <button
                     type="button"
                     className="button button--primary"
                     disabled={Boolean(pendingAction)}
-                    onClick={() => askAction('make-admin')}
+                    onClick={() => askAction('approve-role')}
                   >
-                    Назначить администратором
+                    Одобрить заявку
                   </button>
-                ) : (
+                  <button
+                    type="button"
+                    className="button button--ghost"
+                    disabled={Boolean(pendingAction)}
+                    onClick={() => askAction('reject-role')}
+                  >
+                    Отклонить заявку
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="action-row action-row--column">
+                {activeUser.role === 'admin' ? (
                   <button
                     type="button"
                     className="button button--secondary"
@@ -329,6 +406,15 @@ const AdminUsersPage = () => {
                     onClick={() => askAction('make-student')}
                   >
                     Снять права администратора
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button button--primary"
+                    disabled={Boolean(pendingAction)}
+                    onClick={() => askAction('make-admin')}
+                  >
+                    Назначить администратором
                   </button>
                 )}
 

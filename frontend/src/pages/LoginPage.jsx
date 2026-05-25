@@ -26,6 +26,7 @@ const initialRegisterForm = {
   course_value: '',
   program_value: '',
   group_name: '',
+  request_teacher_role: false,
 };
 
 const initialForgotForm = {
@@ -174,19 +175,20 @@ const LoginPage = ({ defaultMode = 'login' }) => {
   }
 
   function handleChange(event) {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
+    const nextValue = type === 'checkbox' ? checked : value;
 
     if (mode === 'login') {
-      setLoginForm((currentForm) => ({ ...currentForm, [name]: value }));
+      setLoginForm((currentForm) => ({ ...currentForm, [name]: nextValue }));
       return;
     }
 
     if (mode === 'forgot') {
-      setForgotForm((currentForm) => ({ ...currentForm, [name]: value }));
+      setForgotForm((currentForm) => ({ ...currentForm, [name]: nextValue }));
       return;
     }
 
-    setRegisterForm((currentForm) => ({ ...currentForm, [name]: value }));
+    setRegisterForm((currentForm) => ({ ...currentForm, [name]: nextValue }));
   }
 
   function fillLoginWithDemoData() {
@@ -318,6 +320,7 @@ const LoginPage = ({ defaultMode = 'login' }) => {
       course_id: courseId,
       program_id: programId,
       group_name: registerForm.group_name || null,
+      request_teacher_role: registerForm.request_teacher_role,
     };
 
     try {
@@ -327,10 +330,13 @@ const LoginPage = ({ defaultMode = 'login' }) => {
         password: registerForm.password,
       });
       setLoginForm((currentForm) => ({ ...currentForm, email: registerForm.email }));
+      const wantedTeacher = registerForm.request_teacher_role;
       setRegisterForm(initialRegisterForm);
       setMode('login');
       setInfo(
-        'Аккаунт создан. Мы отправили письмо для подтверждения email — после подтверждения сможете войти.'
+        wantedTeacher
+          ? 'Аккаунт создан. Мы отправили письмо для подтверждения email. Заявка на роль преподавателя отправлена администратору — до её одобрения вы будете пользоваться системой как студент.'
+          : 'Аккаунт создан. Мы отправили письмо для подтверждения email — после подтверждения сможете войти.'
       );
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Не удалось создать аккаунт.');
@@ -642,6 +648,19 @@ const LoginPage = ({ defaultMode = 'login' }) => {
                   onChange={handleChange}
                   placeholder="Например: ИВТ-21-1"
                 />
+              </label>
+
+              <label className="form-field--wide teacher-request-checkbox">
+                <input
+                  type="checkbox"
+                  name="request_teacher_role"
+                  checked={registerForm.request_teacher_role}
+                  onChange={handleChange}
+                />
+                <span>
+                  Я преподаватель — отправить заявку на одобрение администратором.
+                  <small> До одобрения вы будете пользоваться системой как студент.</small>
+                </span>
               </label>
 
               <button className="button button--primary form-button--wide" type="submit">
