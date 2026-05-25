@@ -29,6 +29,9 @@ class UserProfileResponse(BaseModel):
     middle_name: str | None
 
     role_id: int
+    role_name: str | None = None
+    requested_role_id: int | None = None
+    requested_role_name: str | None = None
     is_active: bool
 
     course_id: int | None

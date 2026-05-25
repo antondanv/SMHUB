@@ -20,6 +20,8 @@ class UserRegister(BaseModel):
     program_id: int | None = None
     group_name: str | None = Field(default=None, max_length=100)
 
+    request_teacher_role: bool = False
+
     @field_validator("password")
     @classmethod
     def _check_password(cls, value: str) -> str:
@@ -77,6 +79,8 @@ class AuthUserResponse(BaseModel):
 
     role_id: int
     role_name: str | None
+    requested_role_id: int | None = None
+    requested_role_name: str | None = None
     is_active: bool
     email_confirmed: bool
 

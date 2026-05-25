@@ -1845,6 +1845,16 @@ small {
   background: var(--surface-container);
 }
 
+.role-badge--teacher {
+  color: var(--on-tertiary-container, var(--secondary));
+  background: var(--tertiary-container, var(--surface-container));
+}
+
+.role-badge--pending {
+  color: var(--on-error-container, #6b3a00);
+  background: var(--error-container, #ffe0b2);
+}
+
 .status-active,
 .status-blocked {
   display: inline-flex;

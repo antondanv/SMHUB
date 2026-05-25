@@ -7,6 +7,7 @@ import ProgramSelect from '../components/selectors/ProgramSelect';
 import { useAuth } from '../context/useAuth';
 import { useReferenceData } from '../context/useReferenceData';
 import { PASSWORD_HINT, validatePasswordWithConfirmation } from '../utils/password';
+import { hasPendingTeacherRequest } from '../utils/auth';
 
 const initialPasswordForm = {
   current_password: '',
@@ -215,6 +216,11 @@ const ProfilePage = () => {
             <p className="hero-copy">Изменения будут использоваться в SMHUB для каталога и рекомендаций.</p>
           </div>
 
+          {hasPendingTeacherRequest(user) && (
+            <p className="form-success">
+              Ваша заявка на роль преподавателя рассматривается администратором. До её одобрения вы продолжаете пользоваться системой как студент.
+            </p>
+          )}
           {success && <p className="form-success">{success}</p>}
           {error && <p className="form-error">{error}</p>}
           {referenceDataError && (

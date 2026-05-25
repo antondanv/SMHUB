@@ -72,6 +72,7 @@ def create_user_with_role(
     role_name: str,
     *,
     email_confirmed: bool = False,
+    requested_role_name: str | None = None,
 ) -> User:
     if get_user_by_email(db, user_data.email) is not None:
         raise ValueError("Email already exists")
@@ -83,6 +84,10 @@ def create_user_with_role(
     validate_program_id(db, user_data.program_id)
 
     role = get_role(db, role_name)
+    requested_role_id: int | None = None
+    if requested_role_name is not None and requested_role_name != role_name:
+        requested_role = get_role(db, requested_role_name)
+        requested_role_id = requested_role.id
 
     confirmed_at = datetime.now(timezone.utc) if email_confirmed else None
 
@@ -97,6 +102,7 @@ def create_user_with_role(
         middle_name=user_data.middle_name.strip() if user_data.middle_name else None,
 
         role_id=role.id,
+        requested_role_id=requested_role_id,
         is_active=True,
         email_confirmed=email_confirmed,
         email_confirmed_at=confirmed_at,
@@ -120,7 +126,10 @@ def create_user_with_role(
 
 
 def create_user(db: Session, user_data: UserRegister) -> User:
-    return create_user_with_role(db, user_data, DEFAULT_USER_ROLE)
+    requested = "teacher" if user_data.request_teacher_role else None
+    return create_user_with_role(
+        db, user_data, DEFAULT_USER_ROLE, requested_role_name=requested
+    )
 
 
 def set_password(db: Session, user: User, new_password: str) -> None:

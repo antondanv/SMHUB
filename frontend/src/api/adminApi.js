@@ -31,6 +31,16 @@ export async function deleteAdminUser(userId) {
   await apiClient.delete(`/admin/users/${userId}`);
 }
 
+export async function approveRoleRequest(userId) {
+  const response = await apiClient.post(`/admin/users/${userId}/role-request/approve`);
+  return response.data;
+}
+
+export async function rejectRoleRequest(userId) {
+  const response = await apiClient.post(`/admin/users/${userId}/role-request/reject`);
+  return response.data;
+}
+
 // References CRUD
 export async function createReference(type, data) {
   const response = await apiClient.post(`/admin/${type}`, data);
